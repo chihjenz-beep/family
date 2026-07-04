@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>家庭記事本</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F6F4EE; --card:#FFFFFF; --ink:#3E3A36; --ink-soft:#8B857C;
+  --line:#E7E2D8; --grid:rgba(120,110,95,.07);
+  --dad:#4A7BA6; --mom:#D9636C; --chien:#E08FB0; --hsiang:#6BA368;
+  --pin:#E8B84B;
+  --radius:14px;
+  --shadow:0 2px 10px rgba(90,80,60,.10);
+  --nav-h:62px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  font-family:'Noto Sans TC',-apple-system,'PingFang TC','Microsoft JhengHei',sans-serif;
+  color:var(--ink);
+  background:var(--paper);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size:24px 24px;
+  min-height:100vh;
+}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--dad);outline-offset:2px}
+.hidden{display:none!important}
+
+/* ===== 成員選擇 ===== */
+#screenSelect{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.select-title{font-size:26px;font-weight:900;letter-spacing:2px;margin-bottom:6px}
+.select-sub{color:var(--ink-soft);font-size:14px;margin-bottom:34px}
+.avatar-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;width:100%;max-width:340px}
+.avatar-btn{
+  background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:22px 10px 16px;display:flex;flex-direction:column;align-items:center;gap:10px;
+  position:relative;transition:transform .15s;
+}
+.avatar-btn:active{transform:scale(.96)}
+.avatar-btn::before{ /* 和紙膠帶 */
+  content:'';position:absolute;top:-8px;left:50%;transform:translateX(-50%) rotate(-3deg);
+  width:56px;height:16px;border-radius:2px;opacity:.75;background:var(--tape);
+}
+.avatar-circle{
+  width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:26px;font-weight:900;color:#fff;background:var(--tape);
+}
+.avatar-name{font-weight:700;font-size:16px}
+.avatar-role{font-size:11px;color:var(--ink-soft)}
+
+/* ===== 主框架 ===== */
+#app{padding-bottom:calc(var(--nav-h) + 18px)}
+header{
+  position:sticky;top:0;z-index:20;
+  background:rgba(246,244,238,.92);backdrop-filter:blur(6px);
+  border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;
+}
+.head-title{font-size:19px;font-weight:900;letter-spacing:1.5px}
+.head-date{font-size:11px;color:var(--ink-soft);margin-top:1px}
+.user-chip{
+  display:flex;align-items:center;gap:7px;background:var(--card);
+  border:1px solid var(--line);border-radius:999px;padding:5px 12px 5px 6px;
+  box-shadow:var(--shadow);font-size:13px;font-weight:700;
+}
+.user-chip .dot{width:26px;height:26px;border-radius:50%;color:#fff;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:center}
+main{max-width:560px;margin:0 auto;padding:16px}
+
+/* ===== 今日摘要卡 ===== */
+.summary-card{
+  background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:18px 18px 14px;margin-bottom:22px;position:relative;
+}
+.summary-card::before{
+  content:'';position:absolute;top:-9px;left:22px;width:72px;height:18px;border-radius:2px;
+  background:repeating-linear-gradient(45deg,var(--pin),var(--pin) 6px,rgba(255,255,255,.45) 6px,rgba(255,255,255,.45) 12px);
+  opacity:.8;transform:rotate(-2deg);
+}
+.summary-date{font-size:20px;font-weight:900}
+.summary-week{font-size:13px;color:var(--ink-soft);margin-left:8px}
+.summary-row{display:flex;gap:10px;align-items:flex-start;margin-top:12px;font-size:14px;line-height:1.55}
+.summary-icon{flex:0 0 auto;font-size:16px;margin-top:1px}
+.summary-row .lab{font-weight:700;margin-right:4px}
+.summary-empty{color:var(--ink-soft)}
+.anni-count{color:var(--mom);font-weight:900}
+
+/* ===== 留言牆 ===== */
+.section-head{display:flex;align-items:center;justify-content:space-between;margin:6px 2px 14px}
+.section-title{font-size:16px;font-weight:900;letter-spacing:1px}
+.btn-primary{
+  background:var(--ink);color:#fff;border-radius:999px;padding:8px 18px;
+  font-size:14px;font-weight:700;box-shadow:var(--shadow);
+}
+.notes{display:flex;flex-direction:column;gap:16px}
+.note{
+  background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:20px 16px 12px;position:relative;
+}
+.note:nth-child(odd){transform:rotate(-.6deg)}
+.note:nth-child(even){transform:rotate(.5deg)}
+.note.pinned{border:1.5px solid var(--pin)}
+.note-tape{
+  position:absolute;top:-8px;left:50%;transform:translateX(-50%) rotate(-2deg);
+  width:64px;height:15px;border-radius:2px;opacity:.7;
+}
+.note-pin{position:absolute;top:-10px;right:12px;font-size:18px}
+.note-meta{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.note-author{display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px}
+.note-author .dot{width:20px;height:20px;border-radius:50%;color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.note-to{font-size:11px;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:2px 8px;color:var(--ink-soft)}
+.note-time{font-size:11px;color:var(--ink-soft);margin-left:auto}
+.note-content{font-size:15px;line-height:1.65;white-space:pre-wrap;word-break:break-word}
+.note-foot{display:flex;align-items:center;margin-top:10px;gap:8px}
+.read-dots{display:flex;gap:3px;align-items:center}
+.read-dots .rd{width:9px;height:9px;border-radius:50%;opacity:.25}
+.read-dots .rd.on{opacity:1}
+.read-label{font-size:11px;color:var(--ink-soft)}
+.note-del{margin-left:auto;font-size:12px;color:var(--ink-soft);padding:4px 8px;border-radius:8px}
+.note-del:active{background:var(--paper)}
+.empty-box{
+  text-align:center;color:var(--ink-soft);font-size:14px;padding:44px 16px;
+  background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);line-height:1.8;
+}
+.empty-box .big{font-size:34px;display:block;margin-bottom:8px}
+
+/* ===== 底部導航 ===== */
+nav{
+  position:fixed;bottom:0;left:0;right:0;height:var(--nav-h);z-index:30;
+  background:var(--card);border-top:1px solid var(--line);
+  display:flex;padding-bottom:env(safe-area-inset-bottom);
+  box-shadow:0 -2px 12px rgba(90,80,60,.08);
+}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:var(--ink-soft);font-weight:500}
+.nav-btn .ic{font-size:20px}
+.nav-btn.active{color:var(--ink);font-weight:900}
+
+/* ===== 撰寫留言 modal ===== */
+.modal-mask{position:fixed;inset:0;background:rgba(60,54,45,.45);z-index:40;display:flex;align-items:flex-end;justify-content:center}
+.modal{
+  background:var(--card);width:100%;max-width:560px;border-radius:18px 18px 0 0;
+  padding:20px 18px calc(20px + env(safe-area-inset-bottom));
+}
+.modal h3{font-size:17px;font-weight:900;margin-bottom:14px}
+.modal textarea{
+  width:100%;min-height:110px;border:1.5px solid var(--line);border-radius:10px;
+  padding:12px;font-family:inherit;font-size:15px;resize:vertical;background:var(--paper);
+}
+.field-lab{font-size:13px;font-weight:700;margin:14px 0 8px}
+.chip-row{display:flex;flex-wrap:wrap;gap:8px}
+.chip{
+  border:1.5px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px;
+  background:var(--card);color:var(--ink-soft);font-weight:700;
+}
+.chip.on{border-color:var(--ink);color:var(--ink);background:var(--paper)}
+.pin-row{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:14px;font-weight:700}
+.pin-row input{width:18px;height:18px;accent-color:var(--pin)}
+.modal-actions{display:flex;gap:10px;margin-top:18px}
+.btn-ghost{flex:1;border:1.5px solid var(--line);border-radius:12px;padding:12px;font-size:15px;font-weight:700;color:var(--ink-soft)}
+.btn-send{flex:2;background:var(--ink);color:#fff;border-radius:12px;padding:12px;font-size:15px;font-weight:900}
+.btn-send:disabled{opacity:.4}
+
+/* ===== toast / banner ===== */
+#toast{
+  position:fixed;left:50%;bottom:calc(var(--nav-h) + 24px);transform:translateX(-50%);
+  background:var(--ink);color:#fff;font-size:13px;padding:10px 18px;border-radius:999px;
+  z-index:60;opacity:0;transition:opacity .25s;pointer-events:none;max-width:88%;text-align:center;
+}
+#toast.show{opacity:.95}
+.banner{
+  background:#FDF3DC;border:1px solid #EED9A4;color:#8A6D2F;font-size:12.5px;
+  border-radius:10px;padding:9px 12px;margin-bottom:14px;line-height:1.5;
+}
+.sync-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:#C9C2B4}
+.sync-dot.ok{background:var(--hsiang)}
+.sync-dot.err{background:var(--mom)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<!-- 成員選擇 -->
+<div id="screenSelect">
+  <div class="select-title">家庭記事本</div>
+  <div class="select-sub">今天是誰呢？點一下自己的頭像</div>
+  <div class="avatar-grid" id="avatarGrid"></div>
+</div>
+
+<!-- 主畫面 -->
+<div id="app" class="hidden">
+  <header>
+    <div>
+      <div class="head-title">家庭記事本</div>
+      <div class="head-date" id="headDate"></div>
+    </div>
+    <button class="user-chip" id="userChip" title="切換成員"></button>
+  </header>
+
+  <main>
+    <div id="syncBanner"></div>
+
+    <!-- 首頁 -->
+    <div id="viewHome">
+      <div class="summary-card" id="summaryCard"></div>
+      <div class="section-head">
+        <div class="section-title">📌 家庭留言板</div>
+        <button class="btn-primary" id="btnCompose">＋ 留言</button>
+      </div>
+      <div class="notes" id="noteWall"></div>
+    </div>
+
+    <!-- 佔位頁 -->
+    <div id="viewCalendar" class="hidden"><div class="empty-box"><span class="big">📅</span>家庭行事曆<br>M2 建置中，敬請期待</div></div>
+    <div id="viewTodo" class="hidden"><div class="empty-box"><span class="big">✅</span>待辦與家事分工<br>M3 建置中，敬請期待</div></div>
+    <div id="viewShopping" class="hidden"><div class="empty-box"><span class="big">🛒</span>購物清單<br>M3 建置中，敬請期待</div></div>
+  </main>
+
+  <nav>
+    <button class="nav-btn active" data-view="Home"><span class="ic">🏠</span>首頁</button>
+    <button class="nav-btn" data-view="Calendar"><span class="ic">📅</span>行事曆</button>
+    <button class="nav-btn" data-view="Todo"><span class="ic">✅</span>待辦</button>
+    <button class="nav-btn" data-view="Shopping"><span class="ic">🛒</span>購物</button>
+  </nav>
+</div>
+
+<!-- 撰寫留言 -->
+<div class="modal-mask hidden" id="composeMask">
+  <div class="modal">
+    <h3>寫一張留言</h3>
+    <textarea id="composeText" maxlength="500" placeholder="想跟家人說什麼呢？"></textarea>
+    <div class="field-lab">給誰看</div>
+    <div class="chip-row" id="composeTo"></div>
+    <label class="pin-row hidden" id="pinRow"><input type="checkbox" id="composePin">📍 置頂公告（家長）</label>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="btnCancelCompose">取消</button>
+      <button class="btn-send" id="btnSendCompose">貼上留言牆</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ================== 設定 ================== */
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbxYIHFdMkVjllhPI9MdsshJFGalW8kO2OUD4O_Vl8ZtIf3GpsWASVXIxvte76IywPJfVA/exec'; // 家庭記事本正式後端，勿改回空值
+var LS_KEY  = 'family_notebook_v1';
+var LS_USER = 'family_notebook_user';
+
+var DEFAULT_MEMBERS = [
+  {id:'dad',    name:'爸爸', role:'admin',  color:'#4A7BA6'},
+  {id:'mom',    name:'媽媽', role:'admin',  color:'#D9636C'},
+  {id:'chien',  name:'芊芊', role:'member', color:'#E08FB0'},
+  {id:'hsiang', name:'翔翔', role:'member', color:'#6BA368'}
+];
+
+/* ================== 狀態 ================== */
+var state = {members:DEFAULT_MEMBERS.slice(), messages:[], events:[], todos:[], anniversaries:[]};
+var currentUser = null;
+var _gasLoaded = false;          // 雲端資料載入前禁止寫入（GAS 模式）
+var _syncStatus = GAS_URL ? 'loading' : 'local';
+
+/* ================== 工具 ================== */
+function $(id){return document.getElementById(id)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function pad(n){return (n<10?'0':'')+n}
+function nowStr(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds())}
+function todayStr(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function genId(p){return p+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)}
+function memberOf(id){for(var i=0;i<state.members.length;i++){if(state.members[i].id===id)return state.members[i]}return {id:id,name:id,role:'member',color:'#AAA'}}
+function isAdmin(){return currentUser && memberOf(currentUser).role==='admin'}
+function toast(msg){var t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._tm);t._tm=setTimeout(function(){t.classList.remove('show')},2400)}
+function timeLabel(ts){ // 今天顯示 HH:mm，其他顯示 M/D
+  if(!ts)return'';var dPart=ts.slice(0,10);
+  if(dPart===todayStr())return ts.slice(11,16);
+  var p=dPart.split('-');return (+p[1])+'/'+(+p[2]);
+}
+
+/* ================== localStorage ================== */
+function loadLocal(){
+  try{var raw=localStorage.getItem(LS_KEY);if(raw){var d=JSON.parse(raw);
+    ['members','messages','events','todos','anniversaries'].forEach(function(k){if(Array.isArray(d[k]))state[k]=d[k]});
+  }}catch(e){}
+  currentUser=localStorage.getItem(LS_USER)||null;
+}
+function saveLocal(){try{localStorage.setItem(LS_KEY,JSON.stringify(state))}catch(e){toast('本機儲存空間不足')}}
+
+/* ================== GAS 同步 ================== */
+function gasGet(action,params){
+  var q=Object.assign({action:action},params||{});
+  var qs=Object.keys(q).map(function(k){return k+'='+encodeURIComponent(q[k])}).join('&');
+  return fetch(GAS_URL+'?'+qs).then(function(r){return r.json()});
+}
+function gasPost(action,data){
+  return fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+    body:JSON.stringify({action:action,user:currentUser,data:data})
+  }).then(function(r){return r.json()});
+}
+function fetchAll(){
+  if(!GAS_URL){_syncStatus='local';renderBanner();return}
+  _syncStatus='loading';renderBanner();
+  gasGet('getAll').then(function(res){
+    if(res&&res.ok&&res.data){
+      ['members','messages','events','todos','anniversaries'].forEach(function(k){
+        if(Array.isArray(res.data[k])&&res.data[k].length||k!=='members'){state[k]=res.data[k]||[]}
+      });
+      if(!state.members.length)state.members=DEFAULT_MEMBERS.slice();
+      _gasLoaded=true;_syncStatus='ok';saveLocal();renderAll();
+    }else{_syncStatus='err';renderBanner();toast('雲端資料格式錯誤')}
+  }).catch(function(){_syncStatus='err';renderBanner();toast('無法連線雲端，顯示本機資料')});
+}
+function canWrite(){
+  if(GAS_URL&&!_gasLoaded){toast('雲端資料載入中，請稍候再操作');return false}
+  return true;
+}
+function pushWrite(action,data){
+  if(!GAS_URL)return; // 本機模式
+  gasPost(action,data).then(function(res){
+    if(!(res&&res.ok)){_syncStatus='err';renderBanner();toast('雲端同步失敗，資料暫存本機')}
+  }).catch(function(){_syncStatus='err';renderBanner();toast('雲端同步失敗，資料暫存本機')});
+}
+
+/* ================== 成員選擇 ================== */
+function renderSelect(){
+  var g=$('avatarGrid');g.innerHTML='';
+  state.members.forEach(function(m){
+    var b=document.createElement('button');
+    b.className='avatar-btn';b.style.setProperty('--tape',m.color);
+    b.innerHTML='<div class="avatar-circle">'+esc(m.name.charAt(0))+'</div>'+
+      '<div class="avatar-name">'+esc(m.name)+'</div>'+
+      '<div class="avatar-role">'+(m.role==='admin'?'家長':'小幫手')+'</div>';
+    b.onclick=function(){chooseUser(m.id)};
+    g.appendChild(b);
+  });
+}
+function chooseUser(id){
+  currentUser=id;localStorage.setItem(LS_USER,id);
+  $('screenSelect').classList.add('hidden');$('app').classList.remove('hidden');
+  renderAll();markVisibleRead();
+}
+
+/* ================== 畫面渲染 ================== */
+function renderBanner(){
+  var el=$('syncBanner');if(!el)return;
+  if(!GAS_URL){
+    el.innerHTML='<div class="banner">⚙️ 尚未設定 GAS 後端 — 目前為<b>本機模式</b>，資料只存在這台裝置。部署 Code.gs 後把 Web App URL 貼進 GAS_URL 即可全家同步。</div>';
+  }else if(_syncStatus==='err'){
+    el.innerHTML='<div class="banner"><span class="sync-dot err"></span>雲端連線異常，顯示本機快取。<u onclick="fetchAll()" style="cursor:pointer">點此重試</u></div>';
+  }else{el.innerHTML=''}
+}
+function renderHeader(){
+  var d=new Date(),wk=['日','一','二','三','四','五','六'];
+  $('headDate').textContent=d.getFullYear()+' 年 '+(d.getMonth()+1)+' 月 '+d.getDate()+' 日（'+wk[d.getDay()]+'）';
+  var m=memberOf(currentUser);
+  $('userChip').innerHTML='<span class="dot" style="background:'+m.color+'">'+esc(m.name.charAt(0))+'</span>'+esc(m.name)+' ▾';
+}
+function nextAnniversary(){
+  var best=null,today=new Date();today.setHours(0,0,0,0);
+  state.anniversaries.forEach(function(a){
+    if(!a.date)return;var p=a.date.split('-');if(p.length<3)return;
+    var d=new Date(today.getFullYear(),+p[1]-1,+p[2]);
+    if(a.repeat==='Y'||a.repeat===true||a.repeat==='true'){if(d<today)d=new Date(today.getFullYear()+1,+p[1]-1,+p[2])}
+    else{d=new Date(+p[0],+p[1]-1,+p[2]);if(d<today)return}
+    var diff=Math.round((d-today)/86400000);
+    if(best===null||diff<best.diff)best={name:a.name,diff:diff};
+  });
+  return best;
+}
+function renderSummary(){
+  var d=new Date(),wk=['日','一','二','三','四','五','六'];
+  var html='<div><span class="summary-date">'+(d.getMonth()+1)+' 月 '+d.getDate()+' 日</span><span class="summary-week">星期'+wk[d.getDay()]+'</span></div>';
+  // 今日行程
+  var tEvents=state.events.filter(function(e){return e.date===todayStr()&&e.status!=='deleted'});
+  html+='<div class="summary-row"><span class="summary-icon">📅</span><div><span class="lab">今日行程</span>'+
+    (tEvents.length?esc(tEvents.map(function(e){return e.title}).join('、')):'<span class="summary-empty">今天沒有安排</span>')+'</div></div>';
+  // 我的待辦
+  var myTodos=state.todos.filter(function(t){return t.assignee===currentUser&&t.done!=='Y'&&t.status!=='deleted'});
+  html+='<div class="summary-row"><span class="summary-icon">✅</span><div><span class="lab">我的待辦</span>'+
+    (myTodos.length?esc(myTodos.length+' 項未完成'):'<span class="summary-empty">都完成了，真棒</span>')+'</div></div>';
+  // 紀念日
+  var anni=nextAnniversary();
+  html+='<div class="summary-row"><span class="summary-icon">🎂</span><div><span class="lab">紀念日</span>'+
+    (anni?(anni.diff===0?'今天是 <b>'+esc(anni.name)+'</b>！🎉':'距離 '+esc(anni.name)+' 還有 <span class="anni-count">'+anni.diff+'</span> 天'):'<span class="summary-empty">尚未設定紀念日</span>')+'</div></div>';
+  // 未讀留言
+  var unread=visibleMessages().filter(function(m){return m.author!==currentUser&&(m.readBy||[]).indexOf(currentUser)===-1}).length;
+  html+='<div class="summary-row"><span class="summary-icon">📌</span><div><span class="lab">留言板</span>'+
+    (unread?'<b>'+unread+'</b> 則新留言':'<span class="summary-empty">沒有未讀留言</span>')+'</div></div>';
+  $('summaryCard').innerHTML=html;
+}
+function visibleMessages(){
+  return state.messages.filter(function(m){
+    if(m.status==='deleted')return false;
+    var to=m.to||['all'];
+    return to.indexOf('all')>-1||to.indexOf(currentUser)>-1||m.author===currentUser;
+  });
+}
+function renderWall(){
+  var list=visibleMessages().slice().sort(function(a,b){
+    if((a.pinned==='Y')!==(b.pinned==='Y'))return a.pinned==='Y'?-1:1;
+    return (b.time||'').localeCompare(a.time||'');
+  });
+  var w=$('noteWall');
+  if(!list.length){w.innerHTML='<div class="empty-box"><span class="big">📝</span>留言牆還空空的<br>按右上角「＋ 留言」寫下第一張吧</div>';return}
+  w.innerHTML='';
+  list.forEach(function(m){
+    var au=memberOf(m.author);
+    var to=m.to||['all'];
+    var toLabel=to.indexOf('all')>-1?'':'給 '+to.map(function(id){return memberOf(id).name}).join('、');
+    var dots=state.members.map(function(mm){
+      if(mm.id===m.author)return'';
+      var on=(m.readBy||[]).indexOf(mm.id)>-1;
+      return '<span class="rd'+(on?' on':'')+'" style="background:'+mm.color+'" title="'+esc(mm.name)+(on?' 已讀':' 未讀')+'"></span>';
+    }).join('');
+    var readCount=(m.readBy||[]).filter(function(id){return id!==m.author}).length;
+    var canDel=isAdmin()||m.author===currentUser;
+    var div=document.createElement('div');
+    div.className='note'+(m.pinned==='Y'?' pinned':'');
+    div.innerHTML=
+      '<div class="note-tape" style="background:'+au.color+'"></div>'+
+      (m.pinned==='Y'?'<div class="note-pin">📍</div>':'')+
+      '<div class="note-meta">'+
+        '<span class="note-author"><span class="dot" style="background:'+au.color+'">'+esc(au.name.charAt(0))+'</span>'+esc(au.name)+'</span>'+
+        (toLabel?'<span class="note-to">'+esc(toLabel)+'</span>':'')+
+        '<span class="note-time">'+esc(timeLabel(m.time))+'</span>'+
+      '</div>'+
+      '<div class="note-content">'+esc(m.content)+'</div>'+
+      '<div class="note-foot">'+
+        '<span class="read-dots">'+dots+'</span><span class="read-label">已讀 '+readCount+'/'+(state.members.length-1)+'</span>'+
+        (canDel?'<button class="note-del" data-del="'+esc(m.id)+'">🗑 刪除</button>':'')+
+      '</div>';
+    w.appendChild(div);
+  });
+  w.querySelectorAll('[data-del]').forEach(function(b){
+    b.onclick=function(){delMessage(b.getAttribute('data-del'))};
+  });
+}
+function renderAll(){renderHeader();renderBanner();renderSummary();renderWall()}
+
+/* ================== 留言操作 ================== */
+var composeToSel=['all'];
+function openCompose(){
+  if(!canWrite())return;
+  composeToSel=['all'];$('composeText').value='';$('composePin').checked=false;
+  $('pinRow').classList.toggle('hidden',!isAdmin());
+  renderComposeChips();
+  $('composeMask').classList.remove('hidden');
+  setTimeout(function(){$('composeText').focus()},100);
+}
+function renderComposeChips(){
+  var box=$('composeTo');box.innerHTML='';
+  var opts=[{id:'all',name:'全家'}].concat(state.members.filter(function(m){return m.id!==currentUser}));
+  opts.forEach(function(o){
+    var c=document.createElement('button');
+    c.className='chip'+(composeToSel.indexOf(o.id)>-1?' on':'');
+    c.textContent=o.name;
+    c.onclick=function(){
+      if(o.id==='all'){composeToSel=['all']}
+      else{
+        var i=composeToSel.indexOf('all');if(i>-1)composeToSel.splice(i,1);
+        var j=composeToSel.indexOf(o.id);
+        if(j>-1)composeToSel.splice(j,1);else composeToSel.push(o.id);
+        if(!composeToSel.length)composeToSel=['all'];
+      }
+      renderComposeChips();
+    };
+    box.appendChild(c);
+  });
+}
+function sendCompose(){
+  var text=$('composeText').value.trim();
+  if(!text){toast('留言內容不能是空的喔');return}
+  if(!canWrite())return;
+  var msg={
+    id:genId('msg'),author:currentUser,content:text,
+    to:composeToSel.slice(),pinned:(isAdmin()&&$('composePin').checked)?'Y':'',
+    readBy:[currentUser],time:nowStr(),status:'active'
+  };
+  state.messages.push(msg);saveLocal();renderAll();
+  $('composeMask').classList.add('hidden');
+  pushWrite('addMessage',msg);
+  toast('留言已貼上牆 📌');
+}
+function delMessage(id){
+  if(!canWrite())return;
+  if(!confirm('確定要刪除這張留言嗎？'))return;
+  for(var i=0;i<state.messages.length;i++){
+    if(state.messages[i].id===id){state.messages[i].status='deleted';break}
+  }
+  saveLocal();renderAll();
+  pushWrite('updateMessage',{id:id,patch:{status:'deleted'}});
+}
+function markVisibleRead(){
+  var ids=[];
+  visibleMessages().forEach(function(m){
+    if(m.author===currentUser)return;
+    m.readBy=m.readBy||[];
+    if(m.readBy.indexOf(currentUser)===-1){m.readBy.push(currentUser);ids.push(m.id)}
+  });
+  if(ids.length){saveLocal();renderAll();if(GAS_URL&&_gasLoaded)pushWrite('markRead',{ids:ids})}
+}
+
+/* ================== 導航 ================== */
+document.querySelectorAll('.nav-btn').forEach(function(b){
+  b.onclick=function(){
+    document.querySelectorAll('.nav-btn').forEach(function(x){x.classList.remove('active')});
+    b.classList.add('active');
+    ['Home','Calendar','Todo','Shopping'].forEach(function(v){
+      $('view'+v).classList.toggle('hidden',v!==b.getAttribute('data-view'));
+    });
+    if(b.getAttribute('data-view')==='Home')markVisibleRead();
+  };
+});
+
+/* ================== 事件繫結 ================== */
+$('btnCompose').onclick=openCompose;
+$('btnCancelCompose').onclick=function(){$('composeMask').classList.add('hidden')};
+$('composeMask').onclick=function(e){if(e.target===this)this.classList.add('hidden')};
+$('btnSendCompose').onclick=sendCompose;
+$('userChip').onclick=function(){
+  localStorage.removeItem(LS_USER);currentUser=null;
+  $('app').classList.add('hidden');$('screenSelect').classList.remove('hidden');renderSelect();
+};
+
+/* ================== 啟動 ================== */
+loadLocal();
+// URL 參數快速切換 ?user=dad|mom|chien|hsiang
+(function(){
+  var u=new URLSearchParams(location.search).get('user');
+  if(u&&DEFAULT_MEMBERS.some(function(m){return m.id===u}))currentUser=u;
+})();
+renderSelect();
+if(currentUser){
+  localStorage.setItem(LS_USER,currentUser);
+  $('screenSelect').classList.add('hidden');$('app').classList.remove('hidden');
+  renderAll();
+}
+fetchAll();
+// 雲端載入完成後補標已讀
+var _readTimer=setInterval(function(){
+  if(_gasLoaded&&currentUser){markVisibleRead();clearInterval(_readTimer)}
+  if(!GAS_URL)clearInterval(_readTimer);
+},1500);
+</script>
+</body>
+</html>
