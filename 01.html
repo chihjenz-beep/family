@@ -285,7 +285,10 @@ nav{
       <div class="head-title">家庭記事本</div>
       <div class="head-date" id="headDate"></div>
     </div>
-    <button class="user-chip" id="userChip" title="切換成員"></button>
+    <div style="display:flex;align-items:center;gap:8px">
+      <button class="cal-nav-btn" id="btnManualRefresh" title="重新整理">⟳</button>
+      <button class="user-chip" id="userChip" title="切換成員"></button>
+    </div>
   </header>
 
   <main>
@@ -538,7 +541,7 @@ function renderHeader(){
 }
 function nextAnniversary(){
   var best=null,today=new Date();today.setHours(0,0,0,0);
-  state.anniversaries.forEach(function(a){
+  activeAnni().forEach(function(a){
     if(!a.date)return;var p=a.date.split('-');if(p.length<3)return;
     var d=new Date(today.getFullYear(),+p[1]-1,+p[2]);
     if(a.repeat==='Y'||a.repeat===true||a.repeat==='true'){if(d<today)d=new Date(today.getFullYear()+1,+p[1]-1,+p[2])}
@@ -1175,6 +1178,24 @@ var _readTimer=setInterval(function(){
   if(_gasLoaded&&currentUser){markVisibleRead();clearInterval(_readTimer)}
   if(!GAS_URL)clearInterval(_readTimer);
 },1500);
+
+// 手動重新整理
+$('btnManualRefresh').onclick=function(){
+  if(!GAS_URL){toast('本機模式沒有雲端資料可同步');return}
+  toast('同步中…');
+  fetchAll();
+};
+
+// 自動輪詢：每 45 秒同步一次（僅分頁在前景時），確保其他裝置的異動能同步過來
+if(GAS_URL){
+  setInterval(function(){
+    if(document.visibilityState==='visible'&&currentUser)fetchAll();
+  },45000);
+  // 分頁從背景切回前景時立即同步一次
+  document.addEventListener('visibilitychange',function(){
+    if(document.visibilityState==='visible'&&currentUser)fetchAll();
+  });
+}
 </script>
 </body>
 </html>
