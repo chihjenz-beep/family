@@ -1186,11 +1186,11 @@ $('btnManualRefresh').onclick=function(){
   fetchAll();
 };
 
-// 自動輪詢：每 45 秒同步一次（僅分頁在前景時），確保其他裝置的異動能同步過來
+// 自動輪詢：每 15 秒同步一次（僅分頁在前景時），確保其他裝置的異動能同步過來
 if(GAS_URL){
   setInterval(function(){
     if(document.visibilityState==='visible'&&currentUser)fetchAll();
-  },45000);
+  },15000);
   // 分頁從背景切回前景時立即同步一次
   document.addEventListener('visibilitychange',function(){
     if(document.visibilityState==='visible'&&currentUser)fetchAll();
