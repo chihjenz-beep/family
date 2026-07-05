@@ -165,6 +165,93 @@ nav{
 .btn-send{flex:2;background:var(--ink);color:#fff;border-radius:12px;padding:12px;font-size:15px;font-weight:900}
 .btn-send:disabled{opacity:.4}
 
+/* ===== 行事曆 ===== */
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cal-nav-btn{width:36px;height:36px;border-radius:50%;background:var(--card);box-shadow:var(--shadow);font-size:16px;font-weight:900;display:flex;align-items:center;justify-content:center;color:var(--ink)}
+.cal-nav-btn:active{transform:scale(.92)}
+.cal-title{font-size:18px;font-weight:900;letter-spacing:1px}
+.cal-actions{display:flex;gap:8px;margin-bottom:14px}
+.cal-actions .chip{border-radius:999px;padding:6px 14px;font-size:12.5px;font-weight:700;background:var(--card);box-shadow:var(--shadow);color:var(--ink-soft);border:none}
+.cal-actions .chip:active{transform:scale(.95)}
+.cal-weekrow{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:4px}
+.cal-weekrow div{text-align:center;font-size:11px;color:var(--ink-soft);font-weight:700;padding:4px 0}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:10px}
+.cal-day{
+  aspect-ratio:1/1;border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+  padding:5px 2px 3px;font-size:12.5px;position:relative;background:transparent;color:var(--ink);
+}
+.cal-day.other{opacity:.28}
+.cal-day.today{background:var(--paper);font-weight:900}
+.cal-day.today .cal-num{color:var(--dad)}
+.cal-day.has-anni{box-shadow:inset 0 0 0 1.4px var(--pin)}
+.cal-day:active{background:var(--paper)}
+.cal-num{font-weight:700;line-height:1}
+.cal-dots{display:flex;gap:2px;flex-wrap:wrap;justify-content:center;margin-top:4px;max-width:34px}
+.cal-dot{width:6px;height:6px;border-radius:50%}
+.cal-dot.all{background:var(--ink)}
+.cal-anni-mark{position:absolute;top:2px;right:3px;font-size:9px}
+.cal-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;padding:0 4px}
+.cal-legend .lg{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-soft)}
+.cal-legend .lg .dot{width:9px;height:9px;border-radius:50%}
+
+/* 行程/紀念日條目卡片 */
+.item-card{background:var(--paper);border-radius:10px;padding:12px 12px 10px;margin-bottom:10px;border:1px solid var(--line)}
+.item-top{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.item-title{font-weight:700;font-size:15px;flex:1}
+.item-who{display:flex;gap:3px}
+.item-who .dot{width:16px;height:16px;border-radius:50%;color:#fff;font-size:9px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.item-note{font-size:12.5px;color:var(--ink-soft);line-height:1.5;margin-top:2px}
+.item-foot{display:flex;align-items:center;gap:10px;margin-top:8px}
+.item-foot .lnk{font-size:12px;color:var(--ink-soft);padding:3px 8px;border-radius:8px}
+.item-foot .lnk:active{background:#fff}
+.item-anni-count{font-size:12px;font-weight:900;color:var(--mom);margin-left:auto}
+.anni-past{color:var(--ink-soft);font-weight:400}
+
+/* ===== 待辦 / 購物清單共用清單樣式 ===== */
+.list-header{display:flex;align-items:center;justify-content:space-between;margin:6px 2px 14px}
+.todo-row{
+  background:var(--card);border-radius:12px;box-shadow:var(--shadow);
+  padding:14px 14px;display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;
+}
+.todo-row.done{opacity:.5}
+.todo-check{
+  flex:0 0 auto;width:26px;height:26px;border-radius:50%;border:2px solid var(--line);
+  display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;margin-top:1px;
+}
+.todo-check.on{background:var(--hsiang);border-color:var(--hsiang)}
+.todo-body{flex:1;min-width:0}
+.todo-title{font-size:15px;font-weight:700;line-height:1.4}
+.todo-row.done .todo-title{text-decoration:line-through}
+.todo-meta{display:flex;align-items:center;gap:7px;margin-top:5px;flex-wrap:wrap}
+.todo-who{display:flex;gap:3px}
+.todo-who .dot{width:18px;height:18px;border-radius:50%;color:#fff;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.todo-badge{font-size:11px;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:2px 8px;color:var(--ink-soft)}
+.todo-edit{flex:0 0 auto;font-size:16px;color:var(--ink-soft);padding:4px 6px}
+.section-sub{font-size:12px;color:var(--ink-soft);font-weight:700;margin:16px 2px 8px;letter-spacing:1px}
+
+/* ===== 購物清單 ===== */
+.shop-add-bar{
+  background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:12px 14px;margin-bottom:16px;
+}
+.shop-add-input{
+  width:100%;border:1.5px solid var(--line);border-radius:10px;padding:11px 12px;
+  font-family:inherit;font-size:15px;background:var(--paper);margin-bottom:10px;
+}
+.shop-cat-row{display:flex;gap:8px}
+.shop-cat-chip{flex:1;border:1.5px solid var(--line);border-radius:10px;padding:8px 4px;font-size:12.5px;font-weight:700;color:var(--ink-soft);text-align:center;background:var(--paper)}
+.shop-cat-chip.on{border-color:var(--ink);color:var(--ink);background:#fff}
+.shop-group-title{font-size:12.5px;font-weight:900;color:var(--ink-soft);margin:4px 2px 8px;display:flex;align-items:center;gap:5px}
+.shop-item{
+  background:var(--card);border-radius:11px;box-shadow:var(--shadow);
+  padding:11px 14px;display:flex;align-items:center;gap:11px;margin-bottom:8px;
+}
+.shop-item.bought{opacity:.45}
+.shop-item .todo-check{width:22px;height:22px}
+.shop-name{flex:1;font-size:14.5px;font-weight:600}
+.shop-item.bought .shop-name{text-decoration:line-through}
+.shop-del{font-size:15px;color:var(--ink-soft);padding:4px 6px}
+
 /* ===== toast / banner ===== */
 #toast{
   position:fixed;left:50%;bottom:calc(var(--nav-h) + 24px);transform:translateX(-50%);
@@ -215,9 +302,36 @@ nav{
     </div>
 
     <!-- 佔位頁 -->
-    <div id="viewCalendar" class="hidden"><div class="empty-box"><span class="big">📅</span>家庭行事曆<br>M2 建置中，敬請期待</div></div>
-    <div id="viewTodo" class="hidden"><div class="empty-box"><span class="big">✅</span>待辦與家事分工<br>M3 建置中，敬請期待</div></div>
-    <div id="viewShopping" class="hidden"><div class="empty-box"><span class="big">🛒</span>購物清單<br>M3 建置中，敬請期待</div></div>
+    <div id="viewCalendar" class="hidden">
+      <div class="cal-header">
+        <button class="cal-nav-btn" id="calPrev">‹</button>
+        <div class="cal-title" id="calTitle"></div>
+        <button class="cal-nav-btn" id="calNext">›</button>
+      </div>
+      <div class="cal-actions">
+        <button class="chip" id="calToday">📍 回到今天</button>
+        <button class="chip" id="btnAnniList">🎂 紀念日</button>
+      </div>
+      <div class="cal-weekrow"><div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div></div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="cal-legend" id="calLegend"></div>
+    </div>
+    <div id="viewTodo" class="hidden">
+      <div class="list-header">
+        <div class="section-title">✅ 待辦與家事分工</div>
+        <button class="btn-primary" id="btnAddTodo">＋ 新增</button>
+      </div>
+      <div id="todoActiveList"></div>
+      <div id="todoDoneWrap"></div>
+    </div>
+    <div id="viewShopping" class="hidden">
+      <div class="list-header"><div class="section-title">🛒 購物清單</div></div>
+      <div class="shop-add-bar">
+        <input type="text" id="shopInput" class="shop-add-input" placeholder="輸入品項，按 Enter 加入清單" maxlength="40">
+        <div class="shop-cat-row" id="shopCatRow"></div>
+      </div>
+      <div id="shopList"></div>
+    </div>
   </main>
 
   <nav>
@@ -243,6 +357,70 @@ nav{
   </div>
 </div>
 
+<!-- 日期詳情 -->
+<div class="modal-mask hidden" id="dayMask">
+  <div class="modal">
+    <h3 id="dayModalTitle"></h3>
+    <div id="dayAnniBanner"></div>
+    <div id="dayEventList"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="btnCloseDay">關閉</button>
+      <button class="btn-send" id="btnAddEventInDay">＋ 新增行程</button>
+    </div>
+  </div>
+</div>
+
+<!-- 新增/編輯行程 -->
+<div class="modal-mask hidden" id="eventMask">
+  <div class="modal">
+    <h3 id="eventModalTitle">新增行程</h3>
+    <input type="text" id="eventTitle" maxlength="60" placeholder="行程標題，例如：牙醫回診"
+      style="width:100%;border:1.5px solid var(--line);border-radius:10px;padding:12px;font-family:inherit;font-size:15px;background:var(--paper)">
+    <div class="field-lab">日期</div>
+    <input type="date" id="eventDate" style="width:100%;border:1.5px solid var(--line);border-radius:10px;padding:11px;font-family:inherit;font-size:15px;background:var(--paper)">
+    <div class="field-lab">誰的行程</div>
+    <div class="chip-row" id="eventWho"></div>
+    <div class="field-lab">備註（選填）</div>
+    <textarea id="eventNote" maxlength="200" style="min-height:60px;width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px;font-family:inherit;font-size:14px;background:var(--paper)"></textarea>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="btnCancelEvent">取消</button>
+      <button class="btn-send" id="btnSaveEvent">儲存</button>
+    </div>
+    <div id="eventDeleteRow" class="hidden" style="text-align:center;margin-top:12px">
+      <button style="color:var(--mom);font-size:13px;font-weight:700" id="btnDeleteEvent">🗑 刪除這個行程</button>
+    </div>
+  </div>
+</div>
+
+<!-- 紀念日管理 -->
+<div class="modal-mask hidden" id="anniMask">
+  <div class="modal">
+    <h3>🎂 紀念日</h3>
+    <div id="anniList"></div>
+    <div id="anniAddArea"></div>
+  </div>
+</div>
+
+<!-- 新增/編輯待辦 -->
+<div class="modal-mask hidden" id="todoMask">
+  <div class="modal">
+    <h3 id="todoModalTitle">新增待辦</h3>
+    <input type="text" id="todoTitle" maxlength="60" placeholder="待辦事項，例如：倒垃圾"
+      style="width:100%;border:1.5px solid var(--line);border-radius:10px;padding:12px;font-family:inherit;font-size:15px;background:var(--paper)">
+    <div class="field-lab">指派給</div>
+    <div class="chip-row" id="todoWho"></div>
+    <div class="field-lab">重複</div>
+    <div class="chip-row" id="todoRepeat"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="btnCancelTodo">取消</button>
+      <button class="btn-send" id="btnSaveTodo">儲存</button>
+    </div>
+    <div id="todoDeleteRow" class="hidden" style="text-align:center;margin-top:12px">
+      <button style="color:var(--mom);font-size:13px;font-weight:700" id="btnDeleteTodo">🗑 刪除這個待辦</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -259,7 +437,7 @@ var DEFAULT_MEMBERS = [
 ];
 
 /* ================== 狀態 ================== */
-var state = {members:DEFAULT_MEMBERS.slice(), messages:[], events:[], todos:[], anniversaries:[]};
+var state = {members:DEFAULT_MEMBERS.slice(), messages:[], events:[], todos:[], shopping:[], anniversaries:[]};
 var currentUser = null;
 var _gasLoaded = false;          // 雲端資料載入前禁止寫入（GAS 模式）
 var _syncStatus = GAS_URL ? 'loading' : 'local';
@@ -283,7 +461,7 @@ function timeLabel(ts){ // 今天顯示 HH:mm，其他顯示 M/D
 /* ================== localStorage ================== */
 function loadLocal(){
   try{var raw=localStorage.getItem(LS_KEY);if(raw){var d=JSON.parse(raw);
-    ['members','messages','events','todos','anniversaries'].forEach(function(k){if(Array.isArray(d[k]))state[k]=d[k]});
+    ['members','messages','events','todos','shopping','anniversaries'].forEach(function(k){if(Array.isArray(d[k]))state[k]=d[k]});
   }}catch(e){}
   currentUser=localStorage.getItem(LS_USER)||null;
 }
@@ -305,7 +483,7 @@ function fetchAll(){
   _syncStatus='loading';renderBanner();
   gasGet('getAll').then(function(res){
     if(res&&res.ok&&res.data){
-      ['members','messages','events','todos','anniversaries'].forEach(function(k){
+      ['members','messages','events','todos','shopping','anniversaries'].forEach(function(k){
         if(Array.isArray(res.data[k])&&res.data[k].length||k!=='members'){state[k]=res.data[k]||[]}
       });
       if(!state.members.length)state.members=DEFAULT_MEMBERS.slice();
@@ -378,7 +556,7 @@ function renderSummary(){
   html+='<div class="summary-row"><span class="summary-icon">📅</span><div><span class="lab">今日行程</span>'+
     (tEvents.length?esc(tEvents.map(function(e){return e.title}).join('、')):'<span class="summary-empty">今天沒有安排</span>')+'</div></div>';
   // 我的待辦
-  var myTodos=state.todos.filter(function(t){return t.assignee===currentUser&&t.done!=='Y'&&t.status!=='deleted'});
+  var myTodos=activeTodos().filter(function(t){return (t.assignee===currentUser||t.assignee==='all')&&!isTodoDoneNow(t)});
   html+='<div class="summary-row"><span class="summary-icon">✅</span><div><span class="lab">我的待辦</span>'+
     (myTodos.length?esc(myTodos.length+' 項未完成'):'<span class="summary-empty">都完成了，真棒</span>')+'</div></div>';
   // 紀念日
@@ -389,6 +567,9 @@ function renderSummary(){
   var unread=visibleMessages().filter(function(m){return m.author!==currentUser&&(m.readBy||[]).indexOf(currentUser)===-1}).length;
   html+='<div class="summary-row"><span class="summary-icon">📌</span><div><span class="lab">留言板</span>'+
     (unread?'<b>'+unread+'</b> 則新留言':'<span class="summary-empty">沒有未讀留言</span>')+'</div></div>';
+  var shopLeft=activeShop().filter(function(s){return s.bought!=='Y'}).length;
+  html+='<div class="summary-row"><span class="summary-icon">🛒</span><div><span class="lab">購物清單</span>'+
+    (shopLeft?'還有 <b>'+shopLeft+'</b> 項待買':'<span class="summary-empty">清單是空的</span>')+'</div></div>';
   $('summaryCard').innerHTML=html;
 }
 function visibleMessages(){
@@ -438,7 +619,7 @@ function renderWall(){
     b.onclick=function(){delMessage(b.getAttribute('data-del'))};
   });
 }
-function renderAll(){renderHeader();renderBanner();renderSummary();renderWall()}
+function renderAll(){renderHeader();renderBanner();renderSummary();renderWall();renderCalendar();renderTodoList();renderShopping()}
 
 /* ================== 留言操作 ================== */
 var composeToSel=['all'];
@@ -503,6 +684,452 @@ function markVisibleRead(){
   if(ids.length){saveLocal();renderAll();if(GAS_URL&&_gasLoaded)pushWrite('markRead',{ids:ids})}
 }
 
+/* ================== 行事曆 ================== */
+var calYear, calMonth; // calMonth: 0-11
+(function initCal(){var d=new Date();calYear=d.getFullYear();calMonth=d.getMonth();})();
+
+function activeEvents(){return state.events.filter(function(e){return e.status!=='deleted'})}
+function activeAnni(){return state.anniversaries.filter(function(a){return a.status!=='deleted'})}
+function eventWhoIds(e){var m=e.member;if(Array.isArray(m))return m.length?m:['all'];return splitCsv(m,['all'])}
+function splitCsv(s,fallback){s=String(s||'').trim();if(!s)return fallback;var arr=s.split(',').map(function(x){return x.trim()}).filter(String);return arr.length?arr:fallback}
+
+// 該西曆年月日是否為某紀念日的發生日（考慮每年重複）
+function anniOccursOn(a,y,mo,day){
+  if(!a.date)return false;var p=a.date.split('-');if(p.length<3)return false;
+  var repeat=(a.repeat==='Y'||a.repeat===true||a.repeat==='true');
+  if(repeat)return (+p[1]-1)===mo&&(+p[2])===day;
+  return (+p[0])===y&&(+p[1]-1)===mo&&(+p[2])===day;
+}
+function anniListOnDate(y,mo,day){return activeAnni().filter(function(a){return anniOccursOn(a,y,mo,day)})}
+
+function renderCalendar(){
+  $('calTitle').textContent=calYear+' 年 '+(calMonth+1)+' 月';
+  var first=new Date(calYear,calMonth,1);
+  var startOffset=first.getDay(); // 0=Sun
+  var daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+  var daysInPrevMonth=new Date(calYear,calMonth,0).getDate();
+  var todayD=new Date(),todayStr2=todayD.getFullYear()+'-'+pad(todayD.getMonth()+1)+'-'+pad(todayD.getDate());
+
+  var cells=[];
+  for(var i=0;i<startOffset;i++){
+    var pd=daysInPrevMonth-startOffset+1+i;
+    cells.push({day:pd,other:true,y:calMonth===0?calYear-1:calYear,mo:calMonth===0?11:calMonth-1});
+  }
+  for(var d=1;d<=daysInMonth;d++)cells.push({day:d,other:false,y:calYear,mo:calMonth});
+  var rest=(7-(cells.length%7))%7;
+  for(var j=1;j<=rest;j++)cells.push({day:j,other:true,y:calMonth===11?calYear+1:calYear,mo:calMonth===11?0:calMonth+1});
+
+  var grid=$('calGrid');grid.innerHTML='';
+  cells.forEach(function(c){
+    var dateStr=c.y+'-'+pad(c.mo+1)+'-'+pad(c.day);
+    var evs=activeEvents().filter(function(e){return e.date===dateStr});
+    var annis=anniListOnDate(c.y,c.mo,c.day);
+    var cls='cal-day'+(c.other?' other':'')+(dateStr===todayStr2?' today':'')+(annis.length?' has-anni':'');
+    var dotIds={};
+    evs.forEach(function(e){eventWhoIds(e).forEach(function(id){dotIds[id]=1})});
+    var dots=Object.keys(dotIds).slice(0,6).map(function(id){
+      if(id==='all')return'<span class="cal-dot all"></span>';
+      return '<span class="cal-dot" style="background:'+memberOf(id).color+'"></span>';
+    }).join('');
+    var cell=document.createElement('button');
+    cell.className=cls;
+    cell.innerHTML='<span class="cal-num">'+c.day+'</span>'+
+      (annis.length?'<span class="cal-anni-mark">🎂</span>':'')+
+      (dots?'<span class="cal-dots">'+dots+'</span>':'');
+    cell.onclick=function(){openDayDetail(dateStr,c.y,c.mo,c.day)};
+    grid.appendChild(cell);
+  });
+
+  var lg=$('calLegend');
+  lg.innerHTML=state.members.map(function(m){
+    return '<span class="lg"><span class="dot" style="background:'+m.color+'"></span>'+esc(m.name)+'</span>';
+  }).join('')+'<span class="lg"><span class="dot" style="background:'+getComputedStyle(document.documentElement).getPropertyValue('--ink')+'"></span>全家</span>';
+}
+
+$('calPrev').onclick=function(){calMonth--;if(calMonth<0){calMonth=11;calYear--}renderCalendar()};
+$('calNext').onclick=function(){calMonth++;if(calMonth>11){calMonth=0;calYear++}renderCalendar()};
+$('calToday').onclick=function(){var d=new Date();calYear=d.getFullYear();calMonth=d.getMonth();renderCalendar()};
+
+/* ---- 日期詳情 ---- */
+var dayCtx={dateStr:'',y:0,mo:0,day:0};
+function openDayDetail(dateStr,y,mo,day){
+  dayCtx={dateStr:dateStr,y:y,mo:mo,day:day};
+  var wk=['日','一','二','三','四','五','六'];
+  var dow=new Date(y,mo,day).getDay();
+  $('dayModalTitle').textContent=y+' 年 '+(mo+1)+' 月 '+day+' 日（'+wk[dow]+'）';
+
+  var annis=anniListOnDate(y,mo,day);
+  $('dayAnniBanner').innerHTML=annis.length?annis.map(function(a){
+    return '<div class="banner">🎂 '+esc(a.name)+'</div>';
+  }).join(''):'';
+
+  var evs=activeEvents().filter(function(e){return e.date===dateStr}).sort(function(a,b){return (a.title||'').localeCompare(b.title||'')});
+  var box=$('dayEventList');
+  if(!evs.length){box.innerHTML='<div class="item-note" style="text-align:center;padding:14px 0">這天還沒有安排行程</div>'}
+  else{
+    box.innerHTML='';
+    evs.forEach(function(e){
+      var who=eventWhoIds(e);
+      var whoHtml=who.indexOf('all')>-1?'<span class="dot" style="background:var(--ink)">全</span>':
+        who.map(function(id){var m=memberOf(id);return '<span class="dot" style="background:'+m.color+'">'+esc(m.name.charAt(0))+'</span>'}).join('');
+      var canEdit=isAdmin()||e.author===currentUser;
+      var div=document.createElement('div');
+      div.className='item-card';
+      div.innerHTML='<div class="item-top"><div class="item-title">'+esc(e.title)+'</div><div class="item-who">'+whoHtml+'</div></div>'+
+        (e.note?'<div class="item-note">'+esc(e.note)+'</div>':'')+
+        (canEdit?'<div class="item-foot"><button class="lnk" data-edit-event="'+esc(e.id)+'">✏️ 編輯</button></div>':'');
+      box.appendChild(div);
+    });
+    box.querySelectorAll('[data-edit-event]').forEach(function(b){
+      b.onclick=function(){openEventForm(findEvent(b.getAttribute('data-edit-event')))};
+    });
+  }
+  $('dayMask').classList.remove('hidden');
+}
+function findEvent(id){for(var i=0;i<state.events.length;i++)if(state.events[i].id===id)return state.events[i];return null}
+$('btnCloseDay').onclick=function(){$('dayMask').classList.add('hidden')};
+$('dayMask').onclick=function(e){if(e.target===this)this.classList.add('hidden')};
+$('btnAddEventInDay').onclick=function(){openEventForm(null)};
+
+/* ---- 新增/編輯行程 ---- */
+var eventWhoSel=['all'];
+var editingEventId=null;
+function openEventForm(existing){
+  if(!canWrite())return;
+  editingEventId=existing?existing.id:null;
+  $('eventModalTitle').textContent=existing?'編輯行程':'新增行程';
+  $('eventTitle').value=existing?existing.title:'';
+  $('eventDate').value=existing?existing.date:dayCtx.dateStr;
+  $('eventNote').value=existing?(existing.note||''):'';
+  eventWhoSel=existing?eventWhoIds(existing).slice():['all'];
+  renderEventWhoChips();
+  $('eventDeleteRow').classList.toggle('hidden',!existing);
+  $('dayMask').classList.add('hidden');
+  $('eventMask').classList.remove('hidden');
+  setTimeout(function(){$('eventTitle').focus()},100);
+}
+function renderEventWhoChips(){
+  var box=$('eventWho');box.innerHTML='';
+  var opts=[{id:'all',name:'全家'}].concat(state.members);
+  opts.forEach(function(o){
+    var c=document.createElement('button');
+    c.className='chip'+(eventWhoSel.indexOf(o.id)>-1?' on':'');
+    c.textContent=o.name;
+    c.onclick=function(){
+      if(o.id==='all'){eventWhoSel=['all']}
+      else{
+        var i=eventWhoSel.indexOf('all');if(i>-1)eventWhoSel.splice(i,1);
+        var j=eventWhoSel.indexOf(o.id);
+        if(j>-1)eventWhoSel.splice(j,1);else eventWhoSel.push(o.id);
+        if(!eventWhoSel.length)eventWhoSel=['all'];
+      }
+      renderEventWhoChips();
+    };
+    box.appendChild(c);
+  });
+}
+$('btnCancelEvent').onclick=function(){$('eventMask').classList.add('hidden')};
+$('eventMask').onclick=function(e){if(e.target===this)this.classList.add('hidden')};
+$('btnSaveEvent').onclick=function(){
+  var title=$('eventTitle').value.trim();
+  var date=$('eventDate').value;
+  if(!title){toast('請輸入行程標題');return}
+  if(!date){toast('請選擇日期');return}
+  if(!canWrite())return;
+  var note=$('eventNote').value.trim();
+  if(editingEventId){
+    var ev=findEvent(editingEventId);
+    if(ev){ev.title=title;ev.date=date;ev.member=eventWhoSel.slice();ev.note=note}
+    saveLocal();renderAll();renderCalendar();
+    $('eventMask').classList.add('hidden');
+    pushWrite('updateEvent',{id:editingEventId,patch:{title:title,date:date,member:eventWhoSel.slice(),note:note}});
+    toast('行程已更新');
+  }else{
+    var obj={id:genId('evt'),date:date,title:title,member:eventWhoSel.slice(),note:note,author:currentUser,status:'active'};
+    state.events.push(obj);saveLocal();renderAll();renderCalendar();
+    $('eventMask').classList.add('hidden');
+    pushWrite('addEvent',obj);
+    toast('行程已新增 📅');
+  }
+};
+$('btnDeleteEvent').onclick=function(){
+  if(!editingEventId)return;
+  if(!confirm('確定要刪除這個行程嗎？'))return;
+  if(!canWrite())return;
+  var ev=findEvent(editingEventId);if(ev)ev.status='deleted';
+  saveLocal();renderAll();renderCalendar();
+  $('eventMask').classList.add('hidden');
+  pushWrite('updateEvent',{id:editingEventId,patch:{status:'deleted'}});
+  toast('行程已刪除');
+};
+
+/* ---- 紀念日管理 ---- */
+$('btnAnniList').onclick=function(){renderAnniModal();$('anniMask').classList.remove('hidden')};
+$('anniMask').onclick=function(e){if(e.target===this)this.classList.add('hidden')};
+function daysUntil(a){
+  var today=new Date();today.setHours(0,0,0,0);
+  var p=a.date.split('-');if(p.length<3)return null;
+  var repeat=(a.repeat==='Y'||a.repeat===true||a.repeat==='true');
+  var d=new Date(today.getFullYear(),+p[1]-1,+p[2]);
+  if(repeat){if(d<today)d=new Date(today.getFullYear()+1,+p[1]-1,+p[2])}
+  else{d=new Date(+p[0],+p[1]-1,+p[2]);if(d<today)return{diff:null,past:true}}
+  return{diff:Math.round((d-today)/86400000),past:false};
+}
+function renderAnniModal(){
+  var list=activeAnni().slice().sort(function(a,b){return (a.date||'').localeCompare(b.date||'')});
+  var box=$('anniList');
+  if(!list.length){box.innerHTML='<div class="item-note" style="text-align:center;padding:14px 0">還沒有設定紀念日</div>'}
+  else{
+    box.innerHTML='';
+    list.forEach(function(a){
+      var du=daysUntil(a);
+      var countHtml=du.past?'<span class="item-anni-count anni-past">已過</span>':
+        (du.diff===0?'<span class="item-anni-count">今天！</span>':'<span class="item-anni-count">'+du.diff+' 天後</span>');
+      var canDel=isAdmin()||a.author===currentUser;
+      var div=document.createElement('div');
+      div.className='item-card';
+      div.innerHTML='<div class="item-top"><div class="item-title">'+esc(a.name)+'</div>'+countHtml+'</div>'+
+        '<div class="item-note">'+esc(a.date)+(a.repeat==='Y'||a.repeat===true||a.repeat==='true'?'（每年重複）':'（單次）')+'</div>'+
+        (canDel?'<div class="item-foot"><button class="lnk" data-del-anni="'+esc(a.id)+'">🗑 刪除</button></div>':'');
+      box.appendChild(div);
+    });
+    box.querySelectorAll('[data-del-anni]').forEach(function(b){
+      b.onclick=function(){delAnniversary(b.getAttribute('data-del-anni'))};
+    });
+  }
+  // 新增區塊：僅家長可新增（家庭共同紀念日交由家長維護，孩子仍可在留言板提醒家長新增）
+  var addBox=$('anniAddArea');
+  if(!isAdmin()){addBox.innerHTML='<div class="item-note" style="margin-top:10px">紀念日由爸爸媽媽新增與管理喔</div>';return}
+  addBox.innerHTML=
+    '<div class="field-lab">新增紀念日</div>'+
+    '<input type="text" id="anniName" maxlength="30" placeholder="名稱，例如：翔翔生日" style="width:100%;border:1.5px solid var(--line);border-radius:10px;padding:11px;font-family:inherit;font-size:14px;background:var(--paper);margin-bottom:8px">'+
+    '<input type="date" id="anniDate" style="width:100%;border:1.5px solid var(--line);border-radius:10px;padding:11px;font-family:inherit;font-size:14px;background:var(--paper);margin-bottom:8px">'+
+    '<label class="pin-row"><input type="checkbox" id="anniRepeat" checked>🔁 每年重複（生日、紀念日等）</label>'+
+    '<div class="modal-actions"><button class="btn-send" id="btnSaveAnni" style="flex:1">新增</button></div>';
+  $('btnSaveAnni').onclick=function(){
+    var name=$('anniName').value.trim(),date=$('anniDate').value;
+    if(!name){toast('請輸入紀念日名稱');return}
+    if(!date){toast('請選擇日期');return}
+    if(!canWrite())return;
+    var obj={id:genId('anni'),name:name,date:date,repeat:$('anniRepeat').checked?'Y':'',author:currentUser,status:'active'};
+    state.anniversaries.push(obj);saveLocal();renderAll();renderCalendar();renderAnniModal();
+    pushWrite('addAnniversary',obj);
+    toast('紀念日已新增 🎂');
+  };
+}
+function delAnniversary(id){
+  if(!canWrite())return;
+  if(!confirm('確定要刪除這個紀念日嗎？'))return;
+  state.anniversaries.forEach(function(a){if(a.id===id)a.status='deleted'});
+  saveLocal();renderAll();renderCalendar();renderAnniModal();
+  pushWrite('updateAnniversary',{id:id,patch:{status:'deleted'}});
+}
+
+/* ================== 待辦與家事分工 ================== */
+var WEEKDAY_LABEL=['日','一','二','三','四','五','六'];
+function activeTodos(){return state.todos.filter(function(t){return t.status!=='deleted'})}
+function todoWhoIds(t){return t.assignee==='all'?['all']:[t.assignee]}
+function sameWeek(ts,ref){
+  if(!ts)return false;
+  var a=new Date(ts.slice(0,10)+'T00:00:00'),b=new Date(ref);
+  var mondayOf=function(d){var x=new Date(d);var wd=(x.getDay()+6)%7;x.setDate(x.getDate()-wd);x.setHours(0,0,0,0);return x};
+  return mondayOf(a).getTime()===mondayOf(b).getTime();
+}
+function isTodoDoneNow(t){
+  if(t.done!=='Y')return false;
+  if(t.repeat==='')return true; // 一次性：完成即完成
+  return sameWeek(t.doneTime,new Date()); // 每週重複：僅本週有效
+}
+function renderTodoList(){
+  var list=activeTodos();
+  var doneList=[],activeList=[];
+  list.forEach(function(t){(isTodoDoneNow(t)?doneList:activeList).push(t)});
+  activeList.sort(function(a,b){return (a.title||'').localeCompare(b.title||'')});
+  var box=$('todoActiveList');
+  if(!activeList.length){box.innerHTML='<div class="empty-box"><span class="big">🎉</span>目前沒有待辦事項<br>按右上角「＋ 新增」加一個吧</div>'}
+  else{box.innerHTML='';activeList.forEach(function(t){box.appendChild(buildTodoRow(t,false))})}
+  var doneWrap=$('todoDoneWrap');
+  if(!doneList.length){doneWrap.innerHTML='';return}
+  doneWrap.innerHTML='<div class="section-sub">已完成</div>';
+  doneList.forEach(function(t){doneWrap.appendChild(buildTodoRow(t,true))});
+}
+function buildTodoRow(t,isDone){
+  var who=todoWhoIds(t);
+  var whoHtml=who[0]==='all'?'<span class="dot" style="background:var(--ink)">全</span>':
+    who.map(function(id){var m=memberOf(id);return '<span class="dot" style="background:'+m.color+'">'+esc(m.name.charAt(0))+'</span>'}).join('');
+  var repeatBadge=t.repeat!==''?'🔁 每週'+WEEKDAY_LABEL[+t.repeat]:'';
+  var canEdit=isAdmin()||t.author===currentUser;
+  var canCheck=isAdmin()||t.assignee===currentUser||t.assignee==='all';
+  var div=document.createElement('div');
+  div.className='todo-row'+(isDone?' done':'');
+  div.innerHTML=
+    '<button class="todo-check'+(isDone?' on':'')+'" data-toggle="'+esc(t.id)+'">'+(isDone?'✓':'')+'</button>'+
+    '<div class="todo-body"><div class="todo-title">'+esc(t.title)+'</div>'+
+    '<div class="todo-meta"><span class="todo-who">'+whoHtml+'</span>'+
+    (repeatBadge?'<span class="todo-badge">'+repeatBadge+'</span>':'')+'</div></div>'+
+    (canEdit?'<button class="todo-edit" data-edit="'+esc(t.id)+'">✏️</button>':'');
+  var chk=div.querySelector('[data-toggle]');
+  if(!canCheck){chk.style.opacity=.35;chk.style.pointerEvents='none'}
+  else chk.onclick=function(){toggleTodo(t.id)};
+  var editBtn=div.querySelector('[data-edit]');
+  if(editBtn)editBtn.onclick=function(){openTodoForm(t)};
+  return div;
+}
+function findTodo(id){for(var i=0;i<state.todos.length;i++)if(state.todos[i].id===id)return state.todos[i];return null}
+function toggleTodo(id){
+  if(!canWrite())return;
+  var t=findTodo(id);if(!t)return;
+  var nowDone=isTodoDoneNow(t);
+  var patch;
+  if(nowDone){t.done='';patch={done:''}}
+  else{t.done='Y';t.doneTime=nowStr();patch={done:'Y',doneTime:t.doneTime}}
+  saveLocal();renderTodoList();renderSummary();
+  pushWrite('updateTodo',{id:id,patch:patch});
+}
+var todoWhoSel='all',todoRepeatSel='',editingTodoId=null;
+function openTodoForm(existing){
+  if(!canWrite())return;
+  editingTodoId=existing?existing.id:null;
+  $('todoModalTitle').textContent=existing?'編輯待辦':'新增待辦';
+  $('todoTitle').value=existing?existing.title:'';
+  todoWhoSel=existing?existing.assignee:'all';
+  todoRepeatSel=existing?(existing.repeat||''):'';
+  renderTodoWhoChips();renderTodoRepeatChips();
+  $('todoDeleteRow').classList.toggle('hidden',!existing);
+  $('todoMask').classList.remove('hidden');
+  setTimeout(function(){$('todoTitle').focus()},100);
+}
+function renderTodoWhoChips(){
+  var box=$('todoWho');box.innerHTML='';
+  var opts=[{id:'all',name:'全家'}].concat(state.members);
+  opts.forEach(function(o){
+    var c=document.createElement('button');
+    c.className='chip'+(todoWhoSel===o.id?' on':'');
+    c.textContent=o.name;
+    c.onclick=function(){todoWhoSel=o.id;renderTodoWhoChips()};
+    box.appendChild(c);
+  });
+}
+function renderTodoRepeatChips(){
+  var box=$('todoRepeat');box.innerHTML='';
+  var opts=[{id:'',name:'不重複'}].concat([0,1,2,3,4,5,6].map(function(d){return{id:String(d),name:'每週'+WEEKDAY_LABEL[d]}}));
+  opts.forEach(function(o){
+    var c=document.createElement('button');
+    c.className='chip'+(todoRepeatSel===o.id?' on':'');
+    c.textContent=o.name;
+    c.onclick=function(){todoRepeatSel=o.id;renderTodoRepeatChips()};
+    box.appendChild(c);
+  });
+}
+$('btnAddTodo').onclick=function(){openTodoForm(null)};
+$('btnCancelTodo').onclick=function(){$('todoMask').classList.add('hidden')};
+$('todoMask').onclick=function(e){if(e.target===this)this.classList.add('hidden')};
+$('btnSaveTodo').onclick=function(){
+  var title=$('todoTitle').value.trim();
+  if(!title){toast('請輸入待辦事項');return}
+  if(!canWrite())return;
+  if(editingTodoId){
+    var t=findTodo(editingTodoId);
+    if(t){t.title=title;t.assignee=todoWhoSel;t.repeat=todoRepeatSel}
+    saveLocal();renderTodoList();renderSummary();
+    $('todoMask').classList.add('hidden');
+    pushWrite('updateTodo',{id:editingTodoId,patch:{title:title,assignee:todoWhoSel,repeat:todoRepeatSel}});
+    toast('待辦已更新');
+  }else{
+    var obj={id:genId('todo'),title:title,assignee:todoWhoSel,repeat:todoRepeatSel,done:'',doneTime:'',author:currentUser,status:'active'};
+    state.todos.push(obj);saveLocal();renderTodoList();renderSummary();
+    $('todoMask').classList.add('hidden');
+    pushWrite('addTodo',obj);
+    toast('待辦已新增 ✅');
+  }
+};
+$('btnDeleteTodo').onclick=function(){
+  if(!editingTodoId)return;
+  if(!confirm('確定要刪除這個待辦嗎？'))return;
+  if(!canWrite())return;
+  var t=findTodo(editingTodoId);if(t)t.status='deleted';
+  saveLocal();renderTodoList();renderSummary();
+  $('todoMask').classList.add('hidden');
+  pushWrite('updateTodo',{id:editingTodoId,patch:{status:'deleted'}});
+  toast('待辦已刪除');
+};
+
+/* ================== 購物清單 ================== */
+var SHOP_CATS=[{id:'食材',ic:'🥬'},{id:'日用',ic:'🧻'},{id:'文具',ic:'✏️'},{id:'其他',ic:'📦'}];
+var shopCatSel='食材';
+function activeShop(){return state.shopping.filter(function(s){return s.status!=='deleted'})}
+function renderShopCatChips(){
+  var box=$('shopCatRow');box.innerHTML='';
+  SHOP_CATS.forEach(function(c){
+    var b=document.createElement('button');
+    b.className='shop-cat-chip'+(shopCatSel===c.id?' on':'');
+    b.textContent=c.ic+' '+c.id;
+    b.onclick=function(){shopCatSel=c.id;renderShopCatChips()};
+    box.appendChild(b);
+  });
+}
+function renderShopping(){
+  var list=activeShop();
+  var box=$('shopList');
+  if(!list.length){box.innerHTML='<div class="empty-box"><span class="big">🛒</span>購物清單是空的<br>上面輸入品項按 Enter 就能加入</div>';return}
+  box.innerHTML='';
+  SHOP_CATS.forEach(function(c){
+    var items=list.filter(function(s){return (s.category||'其他')===c.id});
+    if(!items.length)return;
+    items.sort(function(a,b){
+      var ab=a.bought==='Y',bb=b.bought==='Y';
+      if(ab!==bb)return ab?1:-1;
+      return (b.time||'').localeCompare(a.time||'');
+    });
+    var head=document.createElement('div');
+    head.className='shop-group-title';head.textContent=c.ic+' '+c.id;
+    box.appendChild(head);
+    items.forEach(function(s){
+      var bought=s.bought==='Y';
+      var canDel=isAdmin()||s.proposer===currentUser;
+      var row=document.createElement('div');
+      row.className='shop-item'+(bought?' bought':'');
+      row.innerHTML=
+        '<button class="todo-check'+(bought?' on':'')+'" data-shop-toggle="'+esc(s.id)+'">'+(bought?'✓':'')+'</button>'+
+        '<div class="shop-name">'+esc(s.name)+'</div>'+
+        (canDel?'<button class="shop-del" data-shop-del="'+esc(s.id)+'">🗑</button>':'');
+      box.appendChild(row);
+    });
+  });
+  box.querySelectorAll('[data-shop-toggle]').forEach(function(b){
+    b.onclick=function(){toggleShop(b.getAttribute('data-shop-toggle'))};
+  });
+  box.querySelectorAll('[data-shop-del]').forEach(function(b){
+    b.onclick=function(){delShopItem(b.getAttribute('data-shop-del'))};
+  });
+}
+function findShop(id){for(var i=0;i<state.shopping.length;i++)if(state.shopping[i].id===id)return state.shopping[i];return null}
+function toggleShop(id){
+  if(!canWrite())return;
+  var s=findShop(id);if(!s)return;
+  s.bought=s.bought==='Y'?'':'Y';
+  saveLocal();renderShopping();
+  pushWrite('updateShopItem',{id:id,patch:{bought:s.bought}});
+}
+function delShopItem(id){
+  if(!canWrite())return;
+  if(!confirm('確定要刪除這個購物項目嗎？'))return;
+  var s=findShop(id);if(s)s.status='deleted';
+  saveLocal();renderShopping();
+  pushWrite('updateShopItem',{id:id,patch:{status:'deleted'}});
+}
+function addShopFromInput(){
+  var input=$('shopInput');
+  var name=input.value.trim();
+  if(!name)return;
+  if(!canWrite())return;
+  var obj={id:genId('shop'),name:name,category:shopCatSel,proposer:currentUser,bought:'',time:nowStr(),status:'active'};
+  state.shopping.push(obj);saveLocal();renderShopping();
+  input.value='';input.focus();
+  pushWrite('addShopItem',obj);
+}
+$('shopInput').addEventListener('keydown',function(e){if(e.key==='Enter')addShopFromInput()});
+
 /* ================== 導航 ================== */
 document.querySelectorAll('.nav-btn').forEach(function(b){
   b.onclick=function(){
@@ -512,6 +1139,9 @@ document.querySelectorAll('.nav-btn').forEach(function(b){
       $('view'+v).classList.toggle('hidden',v!==b.getAttribute('data-view'));
     });
     if(b.getAttribute('data-view')==='Home')markVisibleRead();
+    if(b.getAttribute('data-view')==='Calendar')renderCalendar();
+    if(b.getAttribute('data-view')==='Todo')renderTodoList();
+    if(b.getAttribute('data-view')==='Shopping')renderShopping();
   };
 });
 
@@ -526,6 +1156,7 @@ $('userChip').onclick=function(){
 };
 
 /* ================== 啟動 ================== */
+renderShopCatChips();
 loadLocal();
 // URL 參數快速切換 ?user=dad|mom|chien|hsiang
 (function(){
