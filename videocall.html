@@ -162,6 +162,7 @@
       <div class="link-row">
         <button class="ghost-btn" id="genRoomBtn">產生代碼</button>
         <button class="ghost-btn" id="copyLinkBtn">複製邀請連結</button>
+        <button class="ghost-btn" id="resetRoomBtn">清除此房間</button>
       </div>
 
       <span class="toggle-config" id="toggleConfig">進階設定：Firebase 連線設定</span>
@@ -220,6 +221,7 @@ const firebaseConfig = {
   const joinBtn = $('joinBtn');
   const genRoomBtn = $('genRoomBtn');
   const copyLinkBtn = $('copyLinkBtn');
+  const resetRoomBtn = $('resetRoomBtn');
   const toggleConfig = $('toggleConfig');
   const configBlock = $('configBlock');
   const fbConfigInput = $('fbConfigInput');
@@ -298,6 +300,24 @@ const firebaseConfig = {
 
   joinBtn.addEventListener('click', joinCall);
 
+  resetRoomBtn.addEventListener('click', async () => {
+    const code = roomInput.value.trim();
+    if (!code) { alert('請先輸入通話代碼'); return; }
+    let cfgText = fbConfigInput.value.trim();
+    if (!cfgText) { alert('請先於「進階設定」貼上 Firebase 設定'); configBlock.classList.add('open'); return; }
+    let fbConfig;
+    try { fbConfig = parseFirebaseConfig(cfgText); }
+    catch(e){ alert('Firebase 設定格式錯誤'); return; }
+    try {
+      if (!firebase.apps.length) firebase.initializeApp(fbConfig);
+      await firebase.database().ref('calls/' + code).remove();
+      resetRoomBtn.textContent = '已清除';
+      setTimeout(() => resetRoomBtn.textContent = '清除此房間', 1500);
+    } catch(e) {
+      alert('清除失敗：' + e.message);
+    }
+  });
+
   async function joinCall(){
     roomId = roomInput.value.trim();
     if (!roomId) { alert('請輸入通話代碼'); return; }
@@ -363,18 +383,32 @@ const firebaseConfig = {
       else if (pc.connectionState === 'connecting') setStatus('connecting', '連線中…');
     };
 
-    const snap = await roomRef.once('value');
-    const data = snap.val();
+    // 房間資料若超過 3 分鐘沒人接手（例如上次測試沒有正常掛斷留下的殘留資料），視為過期，先清空再開始，
+    // 避免第二個人誤以為房裡已經有「活的」發起端而一直等不到人。
+    const staleSnap = await roomRef.child('createdAt').once('value');
+    const createdAt = staleSnap.val();
+    if (createdAt && (Date.now() - createdAt > 3 * 60 * 1000)) {
+      await roomRef.remove();
+    }
 
-    if (!data || !data.offer) {
-      // 尚無人建立房間 → 擔任發起端
-      isCaller = true;
+    // 用 Firebase transaction 原子性地搶「發起端」名額，避免雙方同時加入時
+    // 都各自判斷「房裡沒人」而同時搶當發起端、互相覆蓋邀請的競爭問題。
+    const lockResult = await roomRef.child('lock').transaction((current) => {
+      if (current === null) return true;   // 還沒人搶到 → 我搶到，我當發起端
+      return;                                // 已經有人搶到 → 放棄，回傳 undefined 讓 transaction 不寫入
+    });
+    isCaller = lockResult.committed;
+
+    if (isCaller) {
       pc.onicecandidate = (e) => {
         if (e.candidate) roomRef.child('callerCandidates').push(e.candidate.toJSON());
       };
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-      await roomRef.set({ offer: { type: offer.type, sdp: offer.sdp } });
+      await roomRef.update({
+        offer: { type: offer.type, sdp: offer.sdp },
+        createdAt: firebase.database.ServerValue.TIMESTAMP
+      });
 
       roomRef.child('answer').on('value', async (s) => {
         const ans = s.val();
@@ -387,12 +421,22 @@ const firebaseConfig = {
       });
 
     } else {
-      // 已有人發起 → 擔任接聽端
-      isCaller = false;
       pc.onicecandidate = (e) => {
         if (e.candidate) roomRef.child('calleeCandidates').push(e.candidate.toJSON());
       };
-      await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+      // 對方拿到發起端名額後才會寫入 offer，這裡等待 offer 出現（一般在幾百毫秒內）
+      let offerData = null;
+      for (let i = 0; i < 50; i++) {
+        const s = await roomRef.child('offer').once('value');
+        offerData = s.val();
+        if (offerData) break;
+        await new Promise(r => setTimeout(r, 200));
+      }
+      if (!offerData) {
+        setStatus('', '找不到對方的邀請，請重新整理再試一次');
+        return;
+      }
+      await pc.setRemoteDescription(new RTCSessionDescription(offerData));
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
       await roomRef.child('answer').set({ type: answer.type, sdp: answer.sdp });
