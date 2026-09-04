@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>雙人通話</title>
+<style>
+  :root{
+    --bg: #101c19;
+    --panel: #17251f;
+    --panel-2: #1e2f28;
+    --line: #2a3a33;
+    --text: #e9efe9;
+    --muted: #8ea39a;
+    --accent: #4fa893;
+    --accent-dim: #33564c;
+    --danger: #c4604a;
+    --danger-dim: #4a2f28;
+    --radius: 10px;
+  }
+  *{ box-sizing: border-box; }
+  html,body{
+    margin:0; padding:0; height:100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Noto Sans TC","PingFang TC","Microsoft JhengHei",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #app{ height:100%; display:flex; flex-direction:column; }
+
+  /* ---------- 設定畫面 ---------- */
+  .setup-wrap{
+    flex:1; display:flex; align-items:center; justify-content:center;
+    padding: 24px;
+  }
+  .setup-card{
+    width:100%; max-width: 420px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 28px 26px 24px;
+  }
+  .setup-title{
+    font-size: 20px; font-weight: 700; margin: 0 0 4px;
+    letter-spacing: 0.3px;
+  }
+  .setup-sub{
+    font-size: 13px; color: var(--muted); margin: 0 0 22px; line-height:1.6;
+  }
+  .field{ margin-bottom: 16px; }
+  .field label{
+    display:block; font-size: 12.5px; color: var(--muted); margin-bottom: 6px;
+  }
+  .field input, .field textarea{
+    width:100%; background: var(--panel-2); border:1px solid var(--line);
+    color: var(--text); border-radius: 8px; padding: 10px 12px;
+    font-size: 14px; font-family: inherit; resize: vertical;
+  }
+  .field textarea{ min-height: 84px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height:1.5; }
+  .field input:focus, .field textarea:focus{ outline:none; border-color: var(--accent); }
+  .role-row{ display:flex; gap:10px; margin-bottom: 18px; }
+  .role-btn{
+    flex:1; padding: 12px 0; text-align:center; border-radius: 8px;
+    border: 1px solid var(--line); background: var(--panel-2);
+    color: var(--text); font-size: 14px; cursor:pointer;
+  }
+  .role-btn.active{ border-color: var(--accent); background: var(--accent-dim); color:#fff; }
+  .primary-btn{
+    width:100%; padding: 13px 0; border-radius: 8px; border:none;
+    background: var(--accent); color:#0c1512; font-weight:700; font-size: 15px;
+    cursor:pointer; letter-spacing: 0.2px;
+  }
+  .primary-btn:disabled{ opacity:0.45; cursor:not-allowed; }
+  .link-row{
+    display:flex; align-items:center; gap:8px; margin-top: 14px;
+  }
+  .ghost-btn{
+    background:none; border:1px solid var(--line); color: var(--muted);
+    padding: 8px 12px; border-radius: 8px; font-size: 12.5px; cursor:pointer;
+  }
+  .setup-note{
+    margin-top: 18px; font-size: 11.5px; color: var(--muted);
+    border-top: 1px solid var(--line); padding-top: 14px; line-height: 1.7;
+  }
+  .setup-note b{ color: var(--text); }
+  .toggle-config{
+    font-size: 12px; color: var(--accent); cursor:pointer; text-decoration:underline;
+    margin-bottom: 14px; display:inline-block;
+  }
+  #configBlock{ display:none; }
+  #configBlock.open{ display:block; }
+
+  /* ---------- 通話畫面 ---------- */
+  .call-wrap{
+    flex:1; display:none; flex-direction:column; position:relative; height:100%;
+  }
+  .call-wrap.active{ display:flex; }
+  .status-bar{
+    position:absolute; top:0; left:0; right:0; z-index:5;
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 12px 16px; font-size: 12.5px; color: var(--muted);
+    background: linear-gradient(to bottom, rgba(0,0,0,0.55), transparent);
+  }
+  .status-dot{ width:8px; height:8px; border-radius:50%; background: var(--muted); display:inline-block; margin-right:6px; }
+  .status-dot.connected{ background: var(--accent); }
+  .status-dot.connecting{ background: #c9a24f; }
+  .stage{
+    flex:1; position:relative; background:#0b1412; overflow:hidden;
+  }
+  video{ width:100%; height:100%; object-fit:cover; background:#0b1412; }
+  #remoteVideo{ width:100%; height:100%; }
+  #localVideo{
+    position:absolute; width: 128px; height: 96px;
+    right: 14px; bottom: 96px;
+    border-radius: 8px; border: 1px solid var(--line);
+    object-fit:cover; z-index: 4; background:#0b1412;
+    transform: scaleX(-1);
+  }
+  .remote-empty{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    flex-direction:column; gap:10px; color: var(--muted); font-size: 13.5px;
+  }
+  .controls{
+    display:flex; align-items:center; justify-content:center; gap:16px;
+    padding: 18px 0 26px; background: linear-gradient(to top, rgba(0,0,0,0.55), transparent);
+    position:relative; z-index: 5;
+  }
+  .ctrl-btn{
+    width: 52px; height: 52px; border-radius: 50%; border: none;
+    background: var(--panel-2); border: 1px solid var(--line);
+    color: var(--text); display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size: 20px;
+  }
+  .ctrl-btn.off{ background: var(--danger-dim); border-color: var(--danger); }
+  .ctrl-btn.hangup{ background: var(--danger); border-color: var(--danger); color:#fff; }
+  .room-tag{
+    font-variant-numeric: tabular-nums; letter-spacing: 0.5px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- 設定畫面 -->
+  <div class="setup-wrap" id="setupWrap">
+    <div class="setup-card">
+      <p class="setup-title">雙人通話</p>
+      <p class="setup-sub">A、B 兩人各自開啟這個網頁，輸入同一組通話代碼即可視訊或語音通話。</p>
+
+      <div class="field">
+        <label>通話代碼（雙方需相同）</label>
+        <input id="roomInput" placeholder="例如：daijiang-0904" autocomplete="off">
+      </div>
+
+      <div class="role-row">
+        <div class="role-btn active" data-role="video" id="modeVideo">視訊通話</div>
+        <div class="role-btn" data-role="audio" id="modeAudio">僅語音</div>
+      </div>
+
+      <button class="primary-btn" id="joinBtn">加入通話</button>
+
+      <div class="link-row">
+        <button class="ghost-btn" id="genRoomBtn">產生代碼</button>
+        <button class="ghost-btn" id="copyLinkBtn">複製邀請連結</button>
+      </div>
+
+      <span class="toggle-config" id="toggleConfig">進階設定：Firebase 連線設定</span>
+      <div id="configBlock">
+        <div class="field">
+          <label>Firebase 設定（貼上 firebaseConfig 物件內容）</label>
+          <textarea id="fbConfigInput" placeholder='{ "apiKey": "...", "authDomain": "...", "databaseURL": "...", "projectId": "..." }'></textarea>
+        </div>
+        <div class="setup-note">
+          需要一組 <b>Firebase Realtime Database</b> 作為雙方連線用的信令通道（不會經過它傳輸影像/聲音本身，只用來交換連線資訊）。<br>
+          步驟：Firebase Console 建立專案 → 新增 Realtime Database（測試模式）→ 專案設定 → 複製 firebaseConfig 貼在上方 → 儲存後雙方使用同一組設定即可互通。設定會存在本機瀏覽器，下次免重填。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 通話畫面 -->
+  <div class="call-wrap" id="callWrap">
+    <div class="status-bar">
+      <span><span class="status-dot" id="statusDot"></span><span id="statusText">準備中</span></span>
+      <span class="room-tag" id="roomTag"></span>
+    </div>
+    <div class="stage">
+      <video id="remoteVideo" autoplay playsinline></video>
+      <div class="remote-empty" id="remoteEmpty">
+        <div>等待對方加入…</div>
+      </div>
+      <video id="localVideo" autoplay playsinline muted></video>
+    </div>
+    <div class="controls">
+      <button class="ctrl-btn" id="micBtn" title="靜音/取消靜音">🎤</button>
+      <button class="ctrl-btn" id="camBtn" title="鏡頭開關">🎥</button>
+      <button class="ctrl-btn hangup" id="hangupBtn" title="掛斷">⏹</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+(function(){
+  const $ = (id) => document.getElementById(id);
+
+  const setupWrap = $('setupWrap');
+  const callWrap = $('callWrap');
+  const roomInput = $('roomInput');
+  const modeVideo = $('modeVideo');
+  const modeAudio = $('modeAudio');
+  const joinBtn = $('joinBtn');
+  const genRoomBtn = $('genRoomBtn');
+  const copyLinkBtn = $('copyLinkBtn');
+  const toggleConfig = $('toggleConfig');
+  const configBlock = $('configBlock');
+  const fbConfigInput = $('fbConfigInput');
+
+  const statusDot = $('statusDot');
+  const statusText = $('statusText');
+  const roomTag = $('roomTag');
+  const remoteVideo = $('remoteVideo');
+  const localVideo = $('localVideo');
+  const remoteEmpty = $('remoteEmpty');
+  const micBtn = $('micBtn');
+  const camBtn = $('camBtn');
+  const hangupBtn = $('hangupBtn');
+
+  let wantVideo = true;
+  let db, roomRef;
+  let pc, localStream;
+  let roomId = '';
+  let isCaller = false;
+  let micOn = true, camOn = true;
+
+  const rtcConfig = {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' }
+    ]
+  };
+
+  // ---- 初始設定：從網址帶入房號、還原 localStorage 設定 ----
+  const params = new URLSearchParams(location.search);
+  if (params.get('room')) roomInput.value = params.get('room');
+  const savedConfig = localStorage.getItem('vc_fbconfig');
+  if (savedConfig) fbConfigInput.value = savedConfig;
+
+  toggleConfig.addEventListener('click', () => {
+    configBlock.classList.toggle('open');
+  });
+
+  modeVideo.addEventListener('click', () => { wantVideo = true; modeVideo.classList.add('active'); modeAudio.classList.remove('active'); });
+  modeAudio.addEventListener('click', () => { wantVideo = false; modeAudio.classList.add('active'); modeVideo.classList.remove('active'); });
+
+  genRoomBtn.addEventListener('click', () => {
+    roomInput.value = Math.random().toString(36).slice(2, 8);
+  });
+
+  copyLinkBtn.addEventListener('click', async () => {
+    const code = roomInput.value.trim();
+    if (!code) { alert('請先輸入或產生通話代碼'); return; }
+    const url = location.origin + location.pathname + '?room=' + encodeURIComponent(code);
+    try {
+      await navigator.clipboard.writeText(url);
+      copyLinkBtn.textContent = '已複製';
+      setTimeout(() => copyLinkBtn.textContent = '複製邀請連結', 1500);
+    } catch(e) {
+      prompt('複製以下連結傳給對方：', url);
+    }
+  });
+
+  joinBtn.addEventListener('click', joinCall);
+
+  async function joinCall(){
+    roomId = roomInput.value.trim();
+    if (!roomId) { alert('請輸入通話代碼'); return; }
+
+    let cfgText = fbConfigInput.value.trim();
+    if (!cfgText) { alert('請先於「進階設定」貼上 Firebase 設定'); configBlock.classList.add('open'); return; }
+    let fbConfig;
+    try { fbConfig = JSON.parse(cfgText); }
+    catch(e){ alert('Firebase 設定格式錯誤，請確認是合法的 JSON'); return; }
+    localStorage.setItem('vc_fbconfig', cfgText);
+
+    joinBtn.disabled = true;
+    joinBtn.textContent = '連線中…';
+
+    try {
+      if (!firebase.apps.length) firebase.initializeApp(fbConfig);
+      db = firebase.database();
+    } catch(e){
+      alert('Firebase 初始化失敗：' + e.message);
+      joinBtn.disabled = false; joinBtn.textContent = '加入通話';
+      return;
+    }
+
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({ video: wantVideo, audio: true });
+    } catch(e){
+      alert('無法取得攝影機/麥克風權限：' + e.message);
+      joinBtn.disabled = false; joinBtn.textContent = '加入通話';
+      return;
+    }
+
+    localVideo.srcObject = localStream;
+    if (!wantVideo) localVideo.style.display = 'none';
+
+    setupWrap.style.display = 'none';
+    callWrap.classList.add('active');
+    roomTag.textContent = '代碼：' + roomId;
+    setStatus('connecting', '連線中…');
+
+    startSignaling();
+  }
+
+  function setStatus(state, text){
+    statusDot.className = 'status-dot' + (state ? ' ' + state : '');
+    statusText.textContent = text;
+  }
+
+  async function startSignaling(){
+    roomRef = db.ref('calls/' + roomId);
+    pc = new RTCPeerConnection(rtcConfig);
+
+    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+    pc.ontrack = (event) => {
+      remoteVideo.srcObject = event.streams[0];
+      remoteEmpty.style.display = 'none';
+    };
+
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === 'connected') setStatus('connected', '通話中');
+      else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') setStatus('', '連線中斷');
+      else if (pc.connectionState === 'connecting') setStatus('connecting', '連線中…');
+    };
+
+    const snap = await roomRef.once('value');
+    const data = snap.val();
+
+    if (!data || !data.offer) {
+      // 尚無人建立房間 → 擔任發起端
+      isCaller = true;
+      pc.onicecandidate = (e) => {
+        if (e.candidate) roomRef.child('callerCandidates').push(e.candidate.toJSON());
+      };
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      await roomRef.set({ offer: { type: offer.type, sdp: offer.sdp } });
+
+      roomRef.child('answer').on('value', async (s) => {
+        const ans = s.val();
+        if (ans && !pc.currentRemoteDescription) {
+          await pc.setRemoteDescription(new RTCSessionDescription(ans));
+        }
+      });
+      roomRef.child('calleeCandidates').on('child_added', (s) => {
+        pc.addIceCandidate(new RTCIceCandidate(s.val())).catch(()=>{});
+      });
+
+    } else {
+      // 已有人發起 → 擔任接聽端
+      isCaller = false;
+      pc.onicecandidate = (e) => {
+        if (e.candidate) roomRef.child('calleeCandidates').push(e.candidate.toJSON());
+      };
+      await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      await roomRef.child('answer').set({ type: answer.type, sdp: answer.sdp });
+
+      roomRef.child('callerCandidates').on('child_added', (s) => {
+        pc.addIceCandidate(new RTCIceCandidate(s.val())).catch(()=>{});
+      });
+    }
+  }
+
+  micBtn.addEventListener('click', () => {
+    if (!localStream) return;
+    micOn = !micOn;
+    localStream.getAudioTracks().forEach(t => t.enabled = micOn);
+    micBtn.classList.toggle('off', !micOn);
+    micBtn.textContent = micOn ? '🎤' : '🔇';
+  });
+
+  camBtn.addEventListener('click', () => {
+    if (!localStream) return;
+    camOn = !camOn;
+    localStream.getVideoTracks().forEach(t => t.enabled = camOn);
+    camBtn.classList.toggle('off', !camOn);
+    camBtn.textContent = camOn ? '🎥' : '🚫';
+  });
+
+  hangupBtn.addEventListener('click', hangup);
+
+  async function hangup(){
+    try {
+      if (pc) pc.close();
+      if (localStream) localStream.getTracks().forEach(t => t.stop());
+      if (roomRef) {
+        // 只清除自己有份的節點，避免影響對方尚未讀取的資料時序問題過於複雜，直接整房清空
+        await roomRef.remove();
+      }
+    } catch(e) {}
+    window.location.reload();
+  }
+
+  window.addEventListener('beforeunload', () => {
+    if (localStream) localStream.getTracks().forEach(t => t.stop());
+  });
+})();
+</script>
+</body>
+</html>
