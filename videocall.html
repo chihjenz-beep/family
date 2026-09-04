@@ -136,6 +136,36 @@
   .room-tag{
     font-variant-numeric: tabular-nums; letter-spacing: 0.5px;
   }
+
+  /* ---------- 待命狀態 ---------- */
+  .standby-active{ border-color: var(--accent) !important; background: var(--accent-dim) !important; color:#fff !important; }
+
+  /* ---------- 來電/撥號 overlay ---------- */
+  .ring-overlay{
+    display:none; position:fixed; inset:0; z-index:50;
+    background: rgba(8,14,12,0.92);
+    align-items:center; justify-content:center;
+  }
+  .ring-overlay.active{ display:flex; }
+  .ring-card{ text-align:center; padding: 24px; }
+  .ring-pulse{
+    font-size: 44px; width: 88px; height: 88px; border-radius:50%;
+    background: var(--accent-dim); border: 1px solid var(--accent);
+    display:flex; align-items:center; justify-content:center; margin: 0 auto 18px;
+    animation: ringPulse 1.1s ease-in-out infinite;
+  }
+  @keyframes ringPulse{
+    0%,100%{ transform: scale(1); }
+    50%{ transform: scale(1.08); }
+  }
+  .ring-title{ font-size: 18px; font-weight:700; margin: 0 0 4px; }
+  .ring-sub{ font-size: 13px; color: var(--muted); margin: 0 0 22px; }
+  .ring-actions{ display:flex; gap: 14px; justify-content:center; }
+  .ring-btn{
+    padding: 12px 26px; border-radius: 8px; border:none; font-size: 14px; font-weight:700; cursor:pointer;
+  }
+  .ring-btn.accept{ background: var(--accent); color:#0c1512; }
+  .ring-btn.decline{ background: var(--danger); color:#fff; }
 </style>
 </head>
 <body>
@@ -145,11 +175,11 @@
   <div class="setup-wrap" id="setupWrap">
     <div class="setup-card">
       <p class="setup-title">雙人通話</p>
-      <p class="setup-sub">A、B 兩人各自開啟這個網頁，輸入同一組通話代碼即可視訊或語音通話。</p>
+      <p class="setup-sub">設定「我的名稱」後開啟待命，對方就能直接按鈴撥給你；不想用按鈴功能，也可以雙方直接輸入同一組通話代碼加入。</p>
 
       <div class="field">
-        <label>通話代碼（雙方需相同）</label>
-        <input id="roomInput" placeholder="例如：daijiang-0904" autocomplete="off">
+        <label>我的名稱（讓對方能撥打給你）</label>
+        <input id="myNameInput" placeholder="例如：智仁" autocomplete="off">
       </div>
 
       <div class="role-row">
@@ -157,7 +187,27 @@
         <div class="role-btn" data-role="audio" id="modeAudio">僅語音</div>
       </div>
 
+      <button class="ghost-btn" id="standbyBtn" style="width:100%; padding:10px 0; margin-bottom:18px;">開啟待命接聽</button>
+
+      <div class="field" style="display:flex; gap:8px; align-items:flex-end;">
+        <div style="flex:1;">
+          <label>撥打對象名稱</label>
+          <input id="dialTargetInput" placeholder="輸入對方設定的名稱" autocomplete="off">
+        </div>
+        <button class="primary-btn" id="dialBtn" style="width:auto; padding:11px 18px; white-space:nowrap;">撥打</button>
+      </div>
+
+      <div class="setup-note" style="margin-top:2px; padding-top:0; border-top:none;">
+        —— 或不使用按鈴，雙方直接輸入同一組代碼 ——
+      </div>
+
+      <div class="field">
+        <label>通話代碼（雙方需相同）</label>
+        <input id="roomInput" placeholder="例如：daijiang-0904" autocomplete="off">
+      </div>
+
       <button class="primary-btn" id="joinBtn">加入通話</button>
+
 
       <div class="link-row">
         <button class="ghost-btn" id="genRoomBtn">產生代碼</button>
@@ -181,6 +231,31 @@ const firebaseConfig = {
           需要一組 <b>Firebase Realtime Database</b> 作為雙方連線用的信令通道（不會經過它傳輸影像/聲音本身，只用來交換連線資訊）。<br>
           步驟：Firebase Console 建立專案 → 新增 Realtime Database（測試模式）→ 專案設定 → 複製 firebaseConfig 貼在上方 → 儲存後雙方使用同一組設定即可互通。設定會存在本機瀏覽器，下次免重填。
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 來電中 overlay -->
+  <div class="ring-overlay" id="incomingOverlay">
+    <div class="ring-card">
+      <div class="ring-pulse">📞</div>
+      <p class="ring-title"><span id="incomingFrom"></span> 來電中…</p>
+      <p class="ring-sub" id="incomingMode"></p>
+      <div class="ring-actions">
+        <button class="ring-btn decline" id="declineBtn">拒接</button>
+        <button class="ring-btn accept" id="acceptBtn">接聽</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 撥號中 overlay -->
+  <div class="ring-overlay" id="outgoingOverlay">
+    <div class="ring-card">
+      <div class="ring-pulse">📞</div>
+      <p class="ring-title">撥號給 <span id="outgoingTo"></span>…</p>
+      <p class="ring-sub" id="outgoingStatus">等待對方接聽</p>
+      <div class="ring-actions">
+        <button class="ring-btn decline" id="cancelDialBtn">取消</button>
       </div>
     </div>
   </div>
@@ -225,6 +300,21 @@ const firebaseConfig = {
   const toggleConfig = $('toggleConfig');
   const configBlock = $('configBlock');
   const fbConfigInput = $('fbConfigInput');
+  const myNameInput = $('myNameInput');
+  const standbyBtn = $('standbyBtn');
+  const dialTargetInput = $('dialTargetInput');
+  const dialBtn = $('dialBtn');
+
+  const incomingOverlay = $('incomingOverlay');
+  const incomingFrom = $('incomingFrom');
+  const incomingMode = $('incomingMode');
+  const acceptBtn = $('acceptBtn');
+  const declineBtn = $('declineBtn');
+
+  const outgoingOverlay = $('outgoingOverlay');
+  const outgoingTo = $('outgoingTo');
+  const outgoingStatus = $('outgoingStatus');
+  const cancelDialBtn = $('cancelDialBtn');
 
   const statusDot = $('statusDot');
   const statusText = $('statusText');
@@ -242,6 +332,11 @@ const firebaseConfig = {
   let roomId = '';
   let isCaller = false;
   let micOn = true, camOn = true;
+  let standbyOn = false;
+  let ringingRef = null;      // 自己收到的來電節點監聽 ref（別人打給我）
+  let dialAckRef = null;      // 自己撥出去後等待對方回應的監聽 ref
+  let dialTimeoutId = null;
+  let audioCtx = null, ringTimerId = null;
 
   const rtcConfig = {
     iceServers: [
@@ -273,6 +368,189 @@ const firebaseConfig = {
   if (params.get('room')) roomInput.value = params.get('room');
   const savedConfig = localStorage.getItem('vc_fbconfig');
   if (savedConfig) fbConfigInput.value = savedConfig;
+  const savedName = localStorage.getItem('vc_myname');
+  if (savedName) myNameInput.value = savedName;
+
+  // 統一的 Firebase 初始化：解析設定、記住設定、建立連線，供加入房間 / 待命 / 撥打共用
+  function initFirebase(){
+    let cfgText = fbConfigInput.value.trim();
+    if (!cfgText) { alert('請先於「進階設定」貼上 Firebase 設定'); configBlock.classList.add('open'); return null; }
+    let fbConfig;
+    try { fbConfig = parseFirebaseConfig(cfgText); }
+    catch(e){ alert('Firebase 設定格式錯誤，請確認貼的是 Firebase 網站給的 firebaseConfig 那段內容（可以連 const ... = { ... }; 整段一起貼，不用手動修改）'); return null; }
+    localStorage.setItem('vc_fbconfig', JSON.stringify(fbConfig, null, 2));
+    fbConfigInput.value = JSON.stringify(fbConfig, null, 2);
+    try {
+      if (!firebase.apps.length) firebase.initializeApp(fbConfig);
+      if (!db) db = firebase.database();
+      return db;
+    } catch(e){
+      alert('Firebase 初始化失敗：' + e.message);
+      return null;
+    }
+  }
+
+  // ---- 響鈴音效（純程式產生，不需外部音檔） ----
+  function startRingtone(){
+    stopRingtone();
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const playBeepPair = () => {
+      const t = audioCtx.currentTime;
+      [0, 0.42].forEach(offset => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0, t + offset);
+        gain.gain.linearRampToValueAtTime(0.22, t + offset + 0.02);
+        gain.gain.linearRampToValueAtTime(0, t + offset + 0.32);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(t + offset); osc.stop(t + offset + 0.34);
+      });
+    };
+    playBeepPair();
+    ringTimerId = setInterval(playBeepPair, 1800);
+  }
+  function stopRingtone(){
+    if (ringTimerId) { clearInterval(ringTimerId); ringTimerId = null; }
+  }
+
+  // ---- 待命接聽 ----
+  let currentIncoming = null;
+
+  function startStandby(){
+    const myName = myNameInput.value.trim();
+    if (!myName) { alert('請先輸入「我的名稱」'); myNameInput.focus(); return; }
+    if (!initFirebase()) return;
+    localStorage.setItem('vc_myname', myName);
+
+    // 用一次使用者手勢先解鎖音訊，之後真正來電才播得出聲音
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    ringingRef = db.ref('presence/' + myName + '/ring');
+    ringingRef.on('value', (snap) => {
+      const data = snap.val();
+      if (data && data.from) showIncomingCall(data);
+    });
+
+    standbyOn = true;
+    standbyBtn.textContent = '待命接聽中（' + myName + '）· 點一下關閉';
+    standbyBtn.classList.add('standby-active');
+  }
+
+  function stopStandby(){
+    if (ringingRef) { ringingRef.off(); ringingRef = null; }
+    standbyOn = false;
+    standbyBtn.textContent = '開啟待命接聽';
+    standbyBtn.classList.remove('standby-active');
+  }
+
+  standbyBtn.addEventListener('click', () => {
+    if (standbyOn) stopStandby(); else startStandby();
+  });
+
+  function showIncomingCall(data){
+    currentIncoming = data;
+    incomingFrom.textContent = data.from;
+    incomingMode.textContent = data.mode === 'audio' ? '語音通話' : '視訊通話';
+    incomingOverlay.classList.add('active');
+    startRingtone();
+  }
+
+  acceptBtn.addEventListener('click', async () => {
+    if (!currentIncoming) return;
+    stopRingtone();
+    incomingOverlay.classList.remove('active');
+    const myName = myNameInput.value.trim();
+    const data = currentIncoming;
+    currentIncoming = null;
+    stopStandby();
+    await db.ref('presence/' + data.from + '/ringAck').set({ status: 'accepted', ts: Date.now() });
+    await db.ref('presence/' + myName + '/ring').remove();
+    wantVideo = data.mode !== 'audio';
+    modeVideo.classList.toggle('active', wantVideo);
+    modeAudio.classList.toggle('active', !wantVideo);
+    roomInput.value = data.room;
+    joinCall();
+  });
+
+  declineBtn.addEventListener('click', async () => {
+    if (!currentIncoming) return;
+    stopRingtone();
+    incomingOverlay.classList.remove('active');
+    const myName = myNameInput.value.trim();
+    const data = currentIncoming;
+    currentIncoming = null;
+    await db.ref('presence/' + data.from + '/ringAck').set({ status: 'declined', ts: Date.now() });
+    await db.ref('presence/' + myName + '/ring').remove();
+  });
+
+  // ---- 撥打對方 ----
+  dialBtn.addEventListener('click', dial);
+
+  async function dial(){
+    const myName = myNameInput.value.trim();
+    const target = dialTargetInput.value.trim();
+    if (!myName) { alert('請先輸入「我的名稱」'); myNameInput.focus(); return; }
+    if (!target) { alert('請輸入撥打對象名稱'); dialTargetInput.focus(); return; }
+    if (!initFirebase()) return;
+    localStorage.setItem('vc_myname', myName);
+
+    const newRoomId = myName + '-' + target + '-' + Math.random().toString(36).slice(2, 8);
+    dialBtn.disabled = true;
+
+    await db.ref('presence/' + target + '/ring').set({
+      from: myName,
+      room: newRoomId,
+      mode: wantVideo ? 'video' : 'audio',
+      ts: Date.now()
+    });
+
+    outgoingTo.textContent = target;
+    outgoingStatus.textContent = '等待對方接聽';
+    outgoingOverlay.classList.add('active');
+
+    dialAckRef = db.ref('presence/' + myName + '/ringAck');
+    dialAckRef.on('value', async (snap) => {
+      const ack = snap.val();
+      if (!ack) return;
+      clearTimeout(dialTimeoutId);
+      if (dialAckRef) { dialAckRef.off(); dialAckRef = null; }
+      await db.ref('presence/' + myName + '/ringAck').remove();
+
+      if (ack.status === 'accepted') {
+        outgoingOverlay.classList.remove('active');
+        dialBtn.disabled = false;
+        roomInput.value = newRoomId;
+        joinCall();
+      } else if (ack.status === 'declined') {
+        outgoingOverlay.classList.remove('active');
+        outgoingStatus.textContent = '對方拒接';
+        dialBtn.disabled = false;
+      }
+    });
+
+    dialTimeoutId = setTimeout(async () => {
+      if (dialAckRef) { dialAckRef.off(); dialAckRef = null; }
+      outgoingOverlay.classList.remove('active');
+      dialBtn.disabled = false;
+      await db.ref('presence/' + target + '/ring').remove();
+      alert('對方沒有接聽');
+    }, 30000);
+  }
+
+  cancelDialBtn.addEventListener('click', async () => {
+    clearTimeout(dialTimeoutId);
+    if (dialAckRef) { dialAckRef.off(); dialAckRef = null; }
+    outgoingOverlay.classList.remove('active');
+    dialBtn.disabled = false;
+    const myName = myNameInput.value.trim();
+    const target = dialTargetInput.value.trim();
+    if (db && target) await db.ref('presence/' + target + '/ring').remove();
+    if (db && myName) await db.ref('presence/' + myName + '/ringAck').remove();
+  });
 
   toggleConfig.addEventListener('click', () => {
     configBlock.classList.toggle('open');
@@ -303,14 +581,9 @@ const firebaseConfig = {
   resetRoomBtn.addEventListener('click', async () => {
     const code = roomInput.value.trim();
     if (!code) { alert('請先輸入通話代碼'); return; }
-    let cfgText = fbConfigInput.value.trim();
-    if (!cfgText) { alert('請先於「進階設定」貼上 Firebase 設定'); configBlock.classList.add('open'); return; }
-    let fbConfig;
-    try { fbConfig = parseFirebaseConfig(cfgText); }
-    catch(e){ alert('Firebase 設定格式錯誤'); return; }
+    if (!initFirebase()) return;
     try {
-      if (!firebase.apps.length) firebase.initializeApp(fbConfig);
-      await firebase.database().ref('calls/' + code).remove();
+      await db.ref('calls/' + code).remove();
       resetRoomBtn.textContent = '已清除';
       setTimeout(() => resetRoomBtn.textContent = '清除此房間', 1500);
     } catch(e) {
@@ -321,26 +594,11 @@ const firebaseConfig = {
   async function joinCall(){
     roomId = roomInput.value.trim();
     if (!roomId) { alert('請輸入通話代碼'); return; }
-
-    let cfgText = fbConfigInput.value.trim();
-    if (!cfgText) { alert('請先於「進階設定」貼上 Firebase 設定'); configBlock.classList.add('open'); return; }
-    let fbConfig;
-    try { fbConfig = parseFirebaseConfig(cfgText); }
-    catch(e){ alert('Firebase 設定格式錯誤，請確認貼的是 Firebase 網站給的 firebaseConfig 那段內容（可以連 const ... = { ... }; 整段一起貼，不用手動修改）'); return; }
-    localStorage.setItem('vc_fbconfig', JSON.stringify(fbConfig, null, 2));
-    fbConfigInput.value = JSON.stringify(fbConfig, null, 2);
+    if (!initFirebase()) return;
+    stopStandby();
 
     joinBtn.disabled = true;
     joinBtn.textContent = '連線中…';
-
-    try {
-      if (!firebase.apps.length) firebase.initializeApp(fbConfig);
-      db = firebase.database();
-    } catch(e){
-      alert('Firebase 初始化失敗：' + e.message);
-      joinBtn.disabled = false; joinBtn.textContent = '加入通話';
-      return;
-    }
 
     try {
       localStream = await navigator.mediaDevices.getUserMedia({ video: wantVideo, audio: true });
@@ -479,6 +737,7 @@ const firebaseConfig = {
 
   window.addEventListener('beforeunload', () => {
     if (localStream) localStream.getTracks().forEach(t => t.stop());
+    stopRingtone();
   });
 })();
 </script>
