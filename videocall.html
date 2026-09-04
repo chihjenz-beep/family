@@ -168,7 +168,13 @@
       <div id="configBlock">
         <div class="field">
           <label>Firebase 設定（貼上 firebaseConfig 物件內容）</label>
-          <textarea id="fbConfigInput" placeholder='{ "apiKey": "...", "authDomain": "...", "databaseURL": "...", "projectId": "..." }'></textarea>
+          <textarea id="fbConfigInput" placeholder='可直接整段貼上 Firebase 網站給的程式碼，例如：
+const firebaseConfig = {
+  apiKey: "...",
+  authDomain: "...",
+  databaseURL: "...",
+  projectId: "..."
+};'></textarea>
         </div>
         <div class="setup-note">
           需要一組 <b>Firebase Realtime Database</b> 作為雙方連線用的信令通道（不會經過它傳輸影像/聲音本身，只用來交換連線資訊）。<br>
@@ -242,6 +248,24 @@
     ]
   };
 
+  // 接受使用者從 Firebase 官網直接複製貼上的整段程式碼：
+  // 可能含 "const firebaseConfig = " 前綴、結尾分號、key 沒加引號等 JS 物件寫法，
+  // 不強制要求嚴格 JSON。
+  function parseFirebaseConfig(raw){
+    let text = raw.trim();
+    // 只取第一個 { 到最後一個 } 之間的內容，去掉 const ... = 前綴與結尾分號
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start === -1 || end === -1 || end < start) throw new Error('找不到 { }');
+    text = text.slice(start, end + 1);
+    // 先試著當作合法 JSON 解析
+    try { return JSON.parse(text); } catch(e) {}
+    // 退而求其次：當作 JS 物件字面量解析（處理 key 沒加引號、單引號字串等情況）
+    const obj = Function('"use strict"; return (' + text + ');')();
+    if (!obj || typeof obj !== 'object') throw new Error('解析結果不是物件');
+    return obj;
+  }
+
   // ---- 初始設定：從網址帶入房號、還原 localStorage 設定 ----
   const params = new URLSearchParams(location.search);
   if (params.get('room')) roomInput.value = params.get('room');
@@ -281,9 +305,10 @@
     let cfgText = fbConfigInput.value.trim();
     if (!cfgText) { alert('請先於「進階設定」貼上 Firebase 設定'); configBlock.classList.add('open'); return; }
     let fbConfig;
-    try { fbConfig = JSON.parse(cfgText); }
-    catch(e){ alert('Firebase 設定格式錯誤，請確認是合法的 JSON'); return; }
-    localStorage.setItem('vc_fbconfig', cfgText);
+    try { fbConfig = parseFirebaseConfig(cfgText); }
+    catch(e){ alert('Firebase 設定格式錯誤，請確認貼的是 Firebase 網站給的 firebaseConfig 那段內容（可以連 const ... = { ... }; 整段一起貼，不用手動修改）'); return; }
+    localStorage.setItem('vc_fbconfig', JSON.stringify(fbConfig, null, 2));
+    fbConfigInput.value = JSON.stringify(fbConfig, null, 2);
 
     joinBtn.disabled = true;
     joinBtn.textContent = '連線中…';
