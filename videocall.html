@@ -365,11 +365,30 @@ const firebaseConfig = {
 
   // ---- 初始設定：從網址帶入房號、還原 localStorage 設定 ----
   const params = new URLSearchParams(location.search);
+  const savedRoom = localStorage.getItem('vc_room');
   if (params.get('room')) roomInput.value = params.get('room');
+  else if (savedRoom) roomInput.value = savedRoom;
+
   const savedConfig = localStorage.getItem('vc_fbconfig');
   if (savedConfig) fbConfigInput.value = savedConfig;
   const savedName = localStorage.getItem('vc_myname');
   if (savedName) myNameInput.value = savedName;
+  const savedTarget = localStorage.getItem('vc_dialtarget');
+  if (savedTarget) dialTargetInput.value = savedTarget;
+  const savedMode = localStorage.getItem('vc_mode');
+  if (savedMode === 'audio') { wantVideo = false; modeAudio.classList.add('active'); modeVideo.classList.remove('active'); }
+
+  roomInput.addEventListener('input', () => localStorage.setItem('vc_room', roomInput.value.trim()));
+  dialTargetInput.addEventListener('input', () => localStorage.setItem('vc_dialtarget', dialTargetInput.value.trim()));
+
+  // 任何一次使用者與頁面的互動（點擊/按鍵/觸控）都拿來解鎖音訊播放權限，
+  // 這樣自動待命時，只要使用者有碰過頁面（不一定要按待命鈕），響鈴聲音就播得出來。
+  function unlockAudioOnce(){
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    ['click','keydown','touchstart'].forEach(ev => document.removeEventListener(ev, unlockAudioOnce));
+  }
+  ['click','keydown','touchstart'].forEach(ev => document.addEventListener(ev, unlockAudioOnce));
 
   // 統一的 Firebase 初始化：解析設定、記住設定、建立連線，供加入房間 / 待命 / 撥打共用
   function initFirebase(){
@@ -556,11 +575,12 @@ const firebaseConfig = {
     configBlock.classList.toggle('open');
   });
 
-  modeVideo.addEventListener('click', () => { wantVideo = true; modeVideo.classList.add('active'); modeAudio.classList.remove('active'); });
-  modeAudio.addEventListener('click', () => { wantVideo = false; modeAudio.classList.add('active'); modeVideo.classList.remove('active'); });
+  modeVideo.addEventListener('click', () => { wantVideo = true; modeVideo.classList.add('active'); modeAudio.classList.remove('active'); localStorage.setItem('vc_mode','video'); });
+  modeAudio.addEventListener('click', () => { wantVideo = false; modeAudio.classList.add('active'); modeVideo.classList.remove('active'); localStorage.setItem('vc_mode','audio'); });
 
   genRoomBtn.addEventListener('click', () => {
     roomInput.value = Math.random().toString(36).slice(2, 8);
+    localStorage.setItem('vc_room', roomInput.value);
   });
 
   copyLinkBtn.addEventListener('click', async () => {
@@ -739,6 +759,12 @@ const firebaseConfig = {
     if (localStream) localStream.getTracks().forEach(t => t.stop());
     stopRingtone();
   });
+
+  // 若已經記住過「我的名稱」與 Firebase 設定，開啟頁面就自動進入待命接聽，
+  // 不用每次都手動點一次待命鈕。
+  if (savedName && savedConfig) {
+    startStandby();
+  }
 })();
 </script>
 </body>
