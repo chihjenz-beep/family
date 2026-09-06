@@ -293,26 +293,40 @@
       }
     }
 
-    // 進入網頁先渲染預設選單
     initAdminOptions();
     buildFrontendUI();
 
+    // 即時雲端資料監聽
     onValue(busRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        if (data.currentTaskKey) currentTaskKey = data.currentTaskKey;
-        if (data.taskDatabase) taskDatabase = data.taskDatabase;
+        let taskChanged = false;
+
+        if (data.currentTaskKey && data.currentTaskKey !== currentTaskKey) {
+          currentTaskKey = data.currentTaskKey;
+          currentStationIndex = 0;
+          isArrivedState = false;
+          taskChanged = true;
+        }
+
+        if (data.taskDatabase) {
+          taskDatabase = data.taskDatabase;
+          taskChanged = true;
+        }
 
         if (data.location) {
           currentRealCoords = { lat: data.location.lat, lng: data.location.lng };
           isDutyOn = data.location.isDutyOn;
           document.getElementById("driver-coords-info").textContent = 
             `雲端座標：Lat ${currentRealCoords.lat.toFixed(5)}, Lng ${currentRealCoords.lng.toFixed(5)}`;
+          updateDutyUI(isDutyOn);
+        }
+
+        if (taskChanged) {
+          initAdminOptions();
+          buildFrontendUI();
         }
       }
-
-      initAdminOptions();
-      buildFrontendUI();
       updateDisplayUI();
     });
 
@@ -426,7 +440,14 @@
       if (panel.style.display === "block") loadAdminTaskData();
     });
 
-    adminTaskSelect.addEventListener("change", loadAdminTaskData);
+    // 切換下拉選單時，立刻同步更新雲端任務
+    adminTaskSelect.addEventListener("change", () => {
+      const selectedKey = adminTaskSelect.value;
+      update(busRef, {
+        currentTaskKey: selectedKey
+      });
+      loadAdminTaskData();
+    });
 
     function loadAdminTaskData() {
       const selectedKey = adminTaskSelect.value || "elder";
