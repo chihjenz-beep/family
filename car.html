@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
+<!DOCTYPE html><html lang="zh-TW"><head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -47,26 +45,26 @@
     .bottom-info { display: flex; justify-content: space-between; align-items: center; background-color: #222; color: #fff; padding: 6px 12px; border-radius: 4px; font-family: monospace; font-size: 1.1rem; margin-top: 10px; }
     .car-num span { font-weight: bold; color: #ffca28; }
 
-    /* Track Panel */
-    .right-panel { width: 68%; background-color: #0b192c; position: relative; display: flex; flex-direction: column; justify-content: center; padding: 25px 35px; min-height: 200px; }
-    .track-container { position: relative; height: 100px; display: flex; align-items: center; }
+    /* Track Panel (優化橫向滾動與防防擠壓) */
+    .right-panel { width: 68%; background-color: #0b192c; position: relative; display: flex; flex-direction: column; justify-content: center; padding: 25px 20px; min-height: 200px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .track-container { position: relative; height: 100px; display: flex; align-items: center; min-width: 100%; }
     .track-line { position: absolute; width: 100%; height: 8px; background-color: #555; z-index: 1; }
     .track-progress { position: absolute; height: 8px; background-color: #f39c12; width: 0%; z-index: 2; transition: width 0.5s linear; }
 
     .arrows-wrapper { position: absolute; width: 100%; display: flex; justify-content: space-between; z-index: 2; padding: 0 1%; }
-    .segment-arrow { color: #2c3e50; font-size: 1.5rem; font-weight: 900; letter-spacing: -3px; transition: color 0.3s; line-height: 1; }
+    .segment-arrow { color: #2c3e50; font-size: 1.2rem; font-weight: 900; letter-spacing: -2px; transition: color 0.3s; line-height: 1; }
     .segment-arrow.active { color: #00d2d3; text-shadow: 0 0 15px #00d2d3; animation: blinker 0.8s linear infinite; }
 
     .stations-wrapper { position: absolute; width: 100%; display: flex; justify-content: space-between; z-index: 3; }
-    .station-node { display: flex; flex-direction: column; align-items: center; position: relative; }
-    .station-circle { width: 16px; height: 16px; background-color: #fff; border: 3px solid var(--accent-orange); border-radius: 50%; transition: all 0.3s; }
+    .station-node { display: flex; flex-direction: column; align-items: center; position: relative; flex-shrink: 0; min-width: 50px; }
+    .station-circle { width: 14px; height: 14px; background-color: #fff; border: 3px solid var(--accent-orange); border-radius: 50%; transition: all 0.3s; }
     .station-node.active .station-circle { background-color: #e74c3c; border-color: #fff; box-shadow: 0 0 10px #e74c3c; }
     .station-node.passed .station-circle { background-color: #7f8c8d; border-color: #4a5568; }
-    .station-name { margin-top: 6px; color: #fff; font-weight: bold; font-size: 0.72rem; white-space: nowrap; }
+    .station-name { margin-top: 6px; color: #fff; font-weight: bold; font-size: 0.7rem; white-space: nowrap; text-align: center; }
     .station-code { font-size: 0.6rem; color: #aaa; }
 
     .train-icon { position: absolute; top: -22px; left: 0%; transform: translateX(-50%); font-size: 1.3rem; transition: left 0.5s linear; z-index: 4; }
-    .status-banner { position: absolute; bottom: 12px; left: 15px; right: 15px; text-align: center; background-color: rgba(255, 255, 255, 0.1); color: #f1c40f; padding: 5px; border-radius: 4px; font-size: 0.8rem; }
+    .status-banner { position: relative; margin-top: 15px; text-align: center; background-color: rgba(255, 255, 255, 0.1); color: #f1c40f; padding: 5px; border-radius: 4px; font-size: 0.8rem; }
     .completed-banner { background-color: #27ae60 !important; color: #fff !important; font-weight: bold; }
 
     /* Admin Panel */
@@ -94,15 +92,13 @@
     @media (max-width: 768px) {
       .metro-display { flex-direction: column; }
       .left-panel { width: 100%; border-right: none; border-bottom: 3px solid #ccc; }
-      .right-panel { width: 100%; min-height: 220px; padding: 25px 20px; }
+      .right-panel { width: 100%; min-height: 180px; padding: 20px 15px; }
       .station-name { font-size: 0.65rem; }
-      .segment-arrow { font-size: 1rem; letter-spacing: -2px; }
+      .segment-arrow { font-size: 0.9rem; letter-spacing: -3px; }
     }
 
     @keyframes blinker { 50% { opacity: 0.2; } }
-  </style>
-</head>
-<body>
+  </style></head><body>
 
   <div class="top-bar">
     <h2>平安家園公務車行車定位系統</h2>
@@ -139,7 +135,7 @@
     </div>
 
     <div class="right-panel">
-      <div class="track-container">
+      <div class="track-container" id="track-container">
         <div class="track-line"></div>
         <div class="track-progress" id="progress-bar"></div>
         <div class="arrows-wrapper" id="arrows-container"></div>
@@ -189,7 +185,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, set, update, onValue, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getDatabase, ref, update, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBTX7owI7jfp_oyIHkMLT5GK-I-YLY_tyc",
@@ -256,6 +252,7 @@
     const gpsDistText = document.getElementById("gps-dist-text");
     const stationsContainer = document.getElementById("stations-container");
     const arrowsContainer = document.getElementById("arrows-container");
+    const trackContainer = document.getElementById("track-container");
 
     function calculateDistance(lat1, lon1, lat2, lon2) {
       if (!lat1 || !lon1 || !lat2 || !lon2) return 999999;
@@ -297,7 +294,6 @@
       updateDisplayUI();
     }
 
-    // 獨立監聽 location 節點變動
     onValue(locationRef, (snapshot) => {
       if (snapshot.exists()) {
         const locData = snapshot.val();
@@ -339,7 +335,6 @@
       }
     }
 
-    // 駕駛員廣播按鈕修正
     document.getElementById("btn-duty-toggle").addEventListener("click", () => {
       if (!isDutyOn) {
         if ("geolocation" in navigator) {
@@ -417,6 +412,11 @@
       const stations = task.stations;
       const total = stations.length;
 
+      // 動態防擠壓邏輯：每站至少保留 70px 寬度，避免手機版重疊
+      const minStationWidth = 70;
+      const calculatedWidth = total * minStationWidth;
+      trackContainer.style.minWidth = calculatedWidth > 0 ? `${calculatedWidth}px` : "100%";
+
       currentTaskNameEl.textContent = task.name;
       trainEl.textContent = task.icon || "🚐";
       stationsContainer.innerHTML = "";
@@ -434,7 +434,7 @@
         const arrow = document.createElement("span");
         arrow.className = "segment-arrow";
         arrow.id = `arrow-${i}`;
-        arrow.innerHTML = "&gt;&gt;&gt;";
+        arrow.innerHTML = ">";
         arrowsContainer.appendChild(arrow);
       }
     }
@@ -576,6 +576,4 @@
       document.getElementById("current-time").textContent = 
         `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
     }, 1000);
-  </script>
-</body>
-</html>
+  </script></body></html>
