@@ -204,6 +204,7 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     const busRef = ref(db, 'bus_DB03');
+    const locationRef = ref(db, 'bus_DB03/location');
 
     const defaultTasks = {
       elder: {
@@ -278,30 +279,17 @@
       adminTaskSelect.value = currentTaskKey;
     }
 
-    // 核心資料更新邏輯 (修復局部更新覆蓋問題)
     function handleDataUpdate(data) {
       if (!data) return;
 
-      if (data.currentTaskKey) {
-        if (data.currentTaskKey !== currentTaskKey) {
-          currentTaskKey = data.currentTaskKey;
-          currentStationIndex = 0;
-          isArrivedState = false;
-        }
+      if (data.currentTaskKey && data.currentTaskKey !== currentTaskKey) {
+        currentTaskKey = data.currentTaskKey;
+        currentStationIndex = 0;
+        isArrivedState = false;
       }
 
       if (data.taskDatabase) {
         taskDatabase = data.taskDatabase;
-      }
-
-      if (data.location) {
-        currentRealCoords = { lat: data.location.lat || 0, lng: data.location.lng || 0 };
-        isDutyOn = data.location.isDutyOn || false;
-        const coordsEl = document.getElementById("driver-coords-info");
-        if (coordsEl) {
-          coordsEl.textContent = `雲端座標：Lat ${currentRealCoords.lat.toFixed(5)}, Lng ${currentRealCoords.lng.toFixed(5)}`;
-        }
-        updateDutyUI(isDutyOn);
       }
 
       renderTaskSelectOptions();
@@ -309,19 +297,23 @@
       updateDisplayUI();
     }
 
-    renderTaskSelectOptions();
-    buildFrontendUI();
-    updateDisplayUI();
+    // 獨立監聽 location 節點變動
+    onValue(locationRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const locData = snapshot.val();
+        if (locData.lat && locData.lng) {
+          currentRealCoords.lat = locData.lat;
+          currentRealCoords.lng = locData.lng;
+        }
+        isDutyOn = locData.isDutyOn || false;
 
-    get(busRef).then((snapshot) => {
-      if (!snapshot.exists()) {
-        set(busRef, {
-          currentTaskKey: "elder",
-          taskDatabase: defaultTasks,
-          location: { lat: 0, lng: 0, isDutyOn: false, timestamp: Date.now() }
-        });
-      } else {
-        handleDataUpdate(snapshot.val());
+        const coordsEl = document.getElementById("driver-coords-info");
+        if (coordsEl && currentRealCoords.lat !== 0) {
+          coordsEl.textContent = `雲端座標：Lat ${currentRealCoords.lat.toFixed(5)}, Lng ${currentRealCoords.lng.toFixed(5)}`;
+        }
+        
+        updateDutyUI(isDutyOn);
+        updateDisplayUI();
       }
     });
 
@@ -347,28 +339,42 @@
       }
     }
 
-    // 駕駛員廣播開關 (修復更新寫入問題)
+    // 駕駛員廣播按鈕修正
     document.getElementById("btn-duty-toggle").addEventListener("click", () => {
       if (!isDutyOn) {
         if ("geolocation" in navigator) {
           requestWakeLock();
-          statusTextEl.textContent = "正在取得定位...";
+          statusTextEl.textContent = "正在搜尋 GPS 衛星訊號...";
           
           watchPositionId = navigator.geolocation.watchPosition(
             (position) => {
-              currentRealCoords.lat = position.coords.latitude;
-              currentRealCoords.lng = position.coords.longitude;
+              const lat = position.coords.latitude;
+              const lng = position.coords.longitude;
               
-              // 使用 update 僅更新 location 節點，防死結
-              update(ref(db, 'bus_DB03/location'), {
-                lat: currentRealCoords.lat,
-                lng: currentRealCoords.lng,
+              currentRealCoords.lat = lat;
+              currentRealCoords.lng = lng;
+
+              const coordsEl = document.getElementById("driver-coords-info");
+              if (coordsEl) {
+                coordsEl.textContent = `即時座標：Lat ${lat.toFixed(5)}, Lng ${lng.toFixed(5)}`;
+              }
+              
+              update(locationRef, {
+                lat: lat,
+                lng: lng,
                 isDutyOn: true,
                 timestamp: Date.now()
               });
             },
             (error) => {
-              alert(`GPS 錯誤 (${error.code}): ${error.message}`);
+              let msg = "";
+              switch(error.code) {
+                case error.PERMISSION_DENIED: msg = "使用者拒絕提供定位權限。"; break;
+                case error.POSITION_UNAVAILABLE: msg = "無法取得位置資訊（請至戶外或開窗處）。"; break;
+                case error.TIMEOUT: msg = "取得定位逾時，請重新再試。"; break;
+                default: msg = error.message; break;
+              }
+              alert(`GPS 錯誤 (${error.code}): ${msg}`);
               updateDutyUI(false);
               isDutyOn = false;
             },
@@ -384,7 +390,7 @@
         if (watchPositionId !== null) navigator.geolocation.clearWatch(watchPositionId);
         releaseWakeLock();
         isDutyOn = false;
-        update(ref(db, 'bus_DB03/location'), { isDutyOn: false });
+        update(locationRef, { isDutyOn: false });
         updateDutyUI(false);
       }
     });
