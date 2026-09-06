@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>平安家園公務車行車定位系統</title>
   
   <style>
@@ -248,6 +251,60 @@
       return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
     }
 
+    function handleDataUpdate(data) {
+      if (!data) return;
+
+      if (data.currentTaskKey && data.currentTaskKey !== currentTaskKey) {
+        currentTaskKey = data.currentTaskKey;
+        currentStationIndex = 0;
+        isArrivedState = false;
+      }
+
+      if (data.taskDatabase) {
+        taskDatabase = data.taskDatabase;
+      }
+
+      if (data.location) {
+        currentRealCoords = { lat: data.location.lat, lng: data.location.lng };
+        isDutyOn = data.location.isDutyOn;
+        const coordsEl = document.getElementById("driver-coords-info");
+        if (coordsEl) {
+          coordsEl.textContent = `雲端座標：Lat ${currentRealCoords.lat.toFixed(5)}, Lng ${currentRealCoords.lng.toFixed(5)}`;
+        }
+        updateDutyUI(isDutyOn);
+      }
+
+      initAdminOptions();
+      buildFrontendUI();
+      updateDisplayUI();
+    }
+
+    function fetchLatestData() {
+      get(busRef).then((snapshot) => {
+        if (snapshot.exists()) {
+          handleDataUpdate(snapshot.val());
+        } else {
+          set(busRef, {
+            currentTaskKey: "elder",
+            taskDatabase: defaultTasks,
+            location: { lat: 0, lng: 0, isDutyOn: false, timestamp: Date.now() }
+          });
+        }
+      });
+    }
+
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) {
+        fetchLatestData();
+      }
+    });
+
+    onValue(busRef, (snapshot) => {
+      handleDataUpdate(snapshot.val());
+    });
+
+    fetchLatestData();
+
     document.getElementById("btn-duty-toggle").addEventListener("click", () => {
       if (!isDutyOn) {
         if ("geolocation" in navigator) {
@@ -292,57 +349,6 @@
         dutyBtn.className = "duty-btn btn-start-duty";
       }
     }
-
-    // 預先用本地預設值載入 UI，避免畫面空白
-    initAdminOptions();
-    buildFrontendUI();
-    updateDisplayUI();
-
-    // 檢查雲端初始狀態，若無資料直接寫入預設結構
-    get(busRef).then((snapshot) => {
-      if (!snapshot.exists()) {
-        set(busRef, {
-          currentTaskKey: "elder",
-          taskDatabase: defaultTasks,
-          location: { lat: 0, lng: 0, isDutyOn: false, timestamp: Date.now() }
-        });
-      }
-    });
-
-    // 監聽雲端即時更新
-    onValue(busRef, (snapshot) => {
-      const data = snapshot.val();
-      if (!data) return;
-
-      let needRebuild = false;
-
-      if (data.currentTaskKey && data.currentTaskKey !== currentTaskKey) {
-        currentTaskKey = data.currentTaskKey;
-        currentStationIndex = 0;
-        isArrivedState = false;
-        needRebuild = true;
-      }
-
-      if (data.taskDatabase) {
-        taskDatabase = data.taskDatabase;
-        needRebuild = true;
-      }
-
-      if (data.location) {
-        currentRealCoords = { lat: data.location.lat, lng: data.location.lng };
-        isDutyOn = data.location.isDutyOn;
-        document.getElementById("driver-coords-info").textContent = 
-          `雲端座標：Lat ${currentRealCoords.lat.toFixed(5)}, Lng ${currentRealCoords.lng.toFixed(5)}`;
-        updateDutyUI(isDutyOn);
-      }
-
-      if (needRebuild) {
-        initAdminOptions();
-        buildFrontendUI();
-      }
-
-      updateDisplayUI();
-    });
 
     function initAdminOptions() {
       adminTaskSelect.innerHTML = "";
