@@ -106,7 +106,7 @@
         <div class="task-display-box">
           <span class="task-label">目前執行任務 (後台同步)：</span>
           <div class="task-read-only">
-            <span id="current-task-name">載入中...</span>
+            <span id="current-task-name">接送長輩</span>
             <span style="font-size: 0.75rem; color: #7f8c8d;">🔒 唯讀</span>
           </div>
         </div>
@@ -132,7 +132,7 @@
         <div class="train-icon" id="train">🚐</div>
         <div class="stations-wrapper" id="stations-container"></div>
       </div>
-      <div class="status-banner" id="status-text">等待雲端定位資料同步...</div>
+      <div class="status-banner" id="status-text">同步雲端資料中...</div>
     </div>
   </div>
 
@@ -279,31 +279,30 @@
       updateDisplayUI();
     }
 
-    function fetchLatestData() {
-      get(busRef).then((snapshot) => {
-        if (snapshot.exists()) {
-          handleDataUpdate(snapshot.val());
-        } else {
-          set(busRef, {
-            currentTaskKey: "elder",
-            taskDatabase: defaultTasks,
-            location: { lat: 0, lng: 0, isDutyOn: false, timestamp: Date.now() }
-          });
-        }
-      });
-    }
+    // 初始化頁面預設畫面，防止畫面停留在「載入中...」
+    initAdminOptions();
+    buildFrontendUI();
+    updateDisplayUI();
 
-    document.addEventListener("visibilitychange", () => {
-      if (!document.hidden) {
-        fetchLatestData();
+    // 強制進行初始寫入，確保資料庫建立基礎節點
+    get(busRef).then((snapshot) => {
+      if (!snapshot.exists()) {
+        set(busRef, {
+          currentTaskKey: "elder",
+          taskDatabase: defaultTasks,
+          location: { lat: 0, lng: 0, isDutyOn: false, timestamp: Date.now() }
+        });
+      } else {
+        handleDataUpdate(snapshot.val());
       }
     });
 
+    // 即時監看 Firebase
     onValue(busRef, (snapshot) => {
-      handleDataUpdate(snapshot.val());
+      if (snapshot.exists()) {
+        handleDataUpdate(snapshot.val());
+      }
     });
-
-    fetchLatestData();
 
     document.getElementById("btn-duty-toggle").addEventListener("click", () => {
       if (!isDutyOn) {
