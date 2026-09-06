@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>平安家園公務車行車定位系統</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; }
+    body { background-color: #121212; min-height: 100vh; color: #fff; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+
+    /* 頂部標題列 */
+    .top-bar { width: 1050px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .mode-btn { background-color: #3498db; color: white; border: none; padding: 8px 16px; font-size: 0.9rem; font-weight: bold; border-radius: 4px; cursor: pointer; }
+    .mode-btn:hover { background-color: #2980b9; }
+
+    /* 前台車載 LCD 面板 */
+    .metro-display { width: 1050px; height: 270px; background-color: #ffffff; border: 4px solid #333; border-radius: 8px; display: flex; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5); color: #000; }
+    .left-panel { width: 32%; background-color: #f8f9fa; border-right: 3px solid #ccc; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; }
+    .line-info { display: flex; align-items: center; gap: 8px; }
+    .line-badge { background-color: #e67e22; color: white; font-weight: bold; padding: 4px 8px; border-radius: 4px; font-size: 1.1rem; }
+    .line-name { font-size: 0.95rem; font-weight: bold; color: #333; }
+    
+    /* 前台唯讀任務名稱顯示 */
+    .task-display-box { margin-top: 8px; }
+    .task-label { font-size: 0.75rem; color: #666; display: block; margin-bottom: 2px; }
+    .task-read-only {
+      width: 100%;
+      padding: 5px 10px;
+      font-size: 0.95rem;
+      font-weight: bold;
+      color: #2c3e50;
+      background-color: #e9ecef;
+      border: 2px solid #bdc3c7;
+      border-radius: 4px;
+      user-select: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .next-station-box { margin-top: 8px; }
+    .next-title { font-size: 0.8rem; color: #666; }
+    .next-station-name { font-size: 1.6rem; font-weight: 900; color: #d35400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .gps-dist-info { font-size: 0.75rem; color: #e67e22; font-weight: bold; margin-top: 2px; }
+
+    .bottom-info { display: flex; justify-content: space-between; align-items: center; background-color: #222; color: #fff; padding: 6px 12px; border-radius: 4px; font-family: monospace; font-size: 1.1rem; }
+    .car-num span { font-weight: bold; color: #ffca28; }
+
+    .right-panel { width: 68%; background-color: #0b192c; position: relative; display: flex; flex-direction: column; justify-content: center; padding: 0 35px; }
+    .track-container { position: relative; height: 100px; display: flex; align-items: center; }
+    .track-line { position: absolute; width: 100%; height: 8px; background-color: #555; z-index: 1; }
+    .track-progress { position: absolute; height: 8px; background-color: #f39c12; width: 0%; z-index: 2; transition: width 0.5s linear; }
+
+    .arrows-wrapper { position: absolute; width: 100%; display: flex; justify-content: space-between; z-index: 2; padding: 0 1%; }
+    .segment-arrow { color: #2c3e50; font-size: 2rem; font-weight: 900; letter-spacing: -3px; transition: color 0.3s; line-height: 1; }
+    .segment-arrow.active { color: #00d2d3; text-shadow: 0 0 15px #00d2d3; animation: blinker 0.8s linear infinite; }
+
+    .stations-wrapper { position: absolute; width: 100%; display: flex; justify-content: space-between; z-index: 3; }
+    .station-node { display: flex; flex-direction: column; align-items: center; position: relative; }
+    .station-circle { width: 16px; height: 16px; background-color: #fff; border: 3px solid #e67e22; border-radius: 50%; transition: all 0.3s; }
+    .station-node.active .station-circle { background-color: #e74c3c; border-color: #fff; box-shadow: 0 0 10px #e74c3c; }
+    .station-node.passed .station-circle { background-color: #7f8c8d; border-color: #4a5568; }
+    .station-name { margin-top: 6px; color: #fff; font-weight: bold; font-size: 0.72rem; white-space: nowrap; }
+    .station-code { font-size: 0.6rem; color: #aaa; }
+
+    .train-icon { position: absolute; top: -22px; left: 0%; transform: translateX(-50%); font-size: 1.3rem; transition: left 0.5s linear; z-index: 4; }
+    .status-banner { position: absolute; bottom: 12px; left: 25px; right: 25px; text-align: center; background-color: rgba(255, 255, 255, 0.1); color: #f1c40f; padding: 5px; border-radius: 4px; font-size: 0.85rem; }
+    .completed-banner { background-color: #27ae60 !important; color: #fff !important; font-weight: bold; }
+
+    /* 後台管理面板 */
+    .admin-panel { width: 1050px; background-color: #1e1e1e; border: 2px solid #444; border-radius: 8px; padding: 20px; display: none; margin-top: 10px; }
+    .admin-title { font-size: 1.2rem; font-weight: bold; color: #3498db; margin-bottom: 15px; border-bottom: 1px solid #444; padding-bottom: 8px; }
+    
+    /* 駕駛員出勤控制器 */
+    .duty-card { background-color: #2c3e50; padding: 15px; border-radius: 6px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+    .duty-status-badge { padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 0.9rem; }
+    .duty-off { background-color: #e74c3c; color: #fff; }
+    .duty-on { background-color: #2ecc71; color: #fff; }
+    
+    .duty-btn { padding: 10px 20px; font-size: 1rem; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; transition: 0.2s; }
+    .btn-start-duty { background-color: #27ae60; color: white; }
+    .btn-start-duty:hover { background-color: #219150; }
+    .btn-stop-duty { background-color: #c0392b; color: white; }
+    .btn-stop-duty:hover { background-color: #962d22; }
+
+    .admin-select { padding: 6px 12px; font-size: 0.95rem; font-weight: bold; color: #2c3e50; background-color: #fff; border: 2px solid #3498db; border-radius: 4px; outline: none; }
+    
+    .gps-table { width: 100%; border-collapse: collapse; margin-top: 15px; color: #fff; }
+    .gps-table th, .gps-table td { border: 1px solid #444; padding: 8px; text-align: center; font-size: 0.85rem; }
+    .gps-table th { background-color: #2c3e50; }
+    .gps-input { width: 100%; background-color: #2a2a2a; border: 1px solid #555; color: #fff; padding: 4px; border-radius: 3px; text-align: center; }
+
+    @keyframes blinker { 50% { opacity: 0.2; } }
+  </style>
+</head>
+<body>
+
+  <div class="top-bar">
+    <h2>平安家園公務車行車定位系統</h2>
+    <button class="mode-btn" onclick="toggleAdminPanel()">🔧 切換後台/前台面板</button>
+  </div>
+
+  <div class="metro-display" id="frontend-display">
+    <div class="left-panel">
+      <div>
+        <div class="line-info">
+          <span class="line-badge">DB03</span>
+          <span class="line-name">平安家園多元關懷</span>
+        </div>
+        
+        <div class="task-display-box">
+          <span class="task-label">目前執行任務 (後台指定)：</span>
+          <div class="task-read-only">
+            <span id="current-task-name">接送長輩</span>
+            <span style="font-size: 0.75rem; color: #7f8c8d;">🔒 唯讀</span>
+          </div>
+        </div>
+
+        <div class="next-station-box">
+          <div class="next-title" id="status-title">下一站 Next Stop</div>
+          <div class="next-station-name" id="target-station">--</div>
+          <div class="gps-dist-info" id="gps-dist-text">GPS 狀態: 未開始出勤</div>
+        </div>
+      </div>
+
+      <div class="bottom-info">
+        <span id="current-time">10:38</span>
+        <div class="car-num">車號 <span>DB03</span></div>
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <div class="track-container">
+        <div class="track-line"></div>
+        <div class="track-progress" id="progress-bar"></div>
+        <div class="arrows-wrapper" id="arrows-container"></div>
+        <div class="train-icon" id="train">🚐</div>
+        <div class="stations-wrapper" id="stations-container"></div>
+      </div>
+      <div class="status-banner" id="status-text">等待駕駛員於後台開啟出勤定位...</div>
+    </div>
+  </div>
+
+  <div class="admin-panel" id="admin-panel">
+    <div class="admin-title">📱 駕駛員勤務與後台定位控制</div>
+    
+    <div class="duty-card">
+      <div>
+        <span style="font-size:0.9rem; color:#aaa;">當前勤務定位狀態：</span>
+        <span id="duty-badge" class="duty-status-badge duty-off">未出勤 (定位關閉)</span>
+        <p id="driver-coords-info" style="font-size: 0.8rem; color: #3498db; margin-top: 5px;">即時座標：--</p>
+      </div>
+      <div>
+        <button id="btn-duty-toggle" class="duty-btn btn-start-duty" onclick="toggleDutyStatus()">▶️ 開始出勤 (開啟手機 GPS)</button>
+      </div>
+    </div>
+
+    <div class="admin-title" style="margin-top:20px;">⚙️ 任務切換與 GPS 站點設定</div>
+    <label style="font-size:0.9rem; font-weight:bold;">選擇與切換前台執行任務：</label>
+    <select id="admin-task-select" class="admin-select" onchange="loadAdminTaskData()">
+    </select>
+
+    <table class="gps-table">
+      <thead>
+        <tr>
+          <th>站序</th>
+          <th>站點名稱</th>
+          <th>緯度 (Latitude)</th>
+          <th>經度 (Longitude)</th>
+          <th>到站判定誤差距離 (公尺)</th>
+        </tr>
+      </thead>
+      <tbody id="admin-gps-tbody">
+      </tbody>
+    </table>
+    <button class="duty-btn btn-start-duty" style="margin-top:15px; font-size:0.85rem;" onclick="saveAndApplyTask()">💾 儲存設定並同步前台任務</button>
+  </div>
+
+  <script>
+    // 後台任務資料庫 (預設座標)
+    let taskDatabase = {
+      elder: {
+        name: "接送長輩",
+        icon: "🚐",
+        stations: [
+          { name: "診所發車", lat: 23.4601, lng: 120.2501, radius: 50 },
+          { name: "興中里",   lat: 23.4620, lng: 120.2530, radius: 50 },
+          { name: "岱江里",   lat: 23.4645, lng: 120.2560, radius: 50 },
+          { name: "岑海里",   lat: 23.4670, lng: 120.2590, radius: 50 },
+          { name: "振寮里",   lat: 23.4695, lng: 120.2620, radius: 50 },
+          { name: "新厝里",   lat: 23.4720, lng: 120.2650, radius: 50 }
+        ]
+      },
+      bento: {
+        name: "便當配送",
+        icon: "🍱",
+        stations: [
+          { name: "江山里", lat: 23.4500, lng: 120.2400, radius: 50 },
+          { name: "振寮里", lat: 23.4530, lng: 120.2430, radius: 50 },
+          { name: "永安里", lat: 23.4560, lng: 120.2460, radius: 50 },
+          { name: "興中里", lat: 23.4590, lng: 120.2490, radius: 50 },
+          { name: "岱江里", lat: 23.4620, lng: 120.2520, radius: 50 },
+          { name: "岑海里", lat: 23.4650, lng: 120.2550, radius: 50 },
+          { name: "新岑里", lat: 23.4680, lng: 120.2580, radius: 50 },
+          { name: "復興里", lat: 23.4710, lng: 120.2610, radius: 50 },
+          { name: "新店村", lat: 23.4740, lng: 120.2640, radius: 50 },
+          { name: "官和村", lat: 23.4770, lng: 120.2670, radius: 50 }
+        ]
+      }
+    };
+
+    let currentTaskKey = "elder";
+    let currentStationIndex = 0;
+    let isArrivedState = false;
+    let isDutyOn = false; // 是否開啟出勤定位
+    let watchPositionId = null; // GPS 監聽 ID
+    let currentRealCoords = { lat: 0, lng: 0 };
+
+    const adminTaskSelect = document.getElementById("admin-task-select");
+    const currentTaskNameEl = document.getElementById("current-task-name");
+    const trainEl = document.getElementById("train");
+    const progressBar = document.getElementById("progress-bar");
+    const targetStationEl = document.getElementById("target-station");
+    const statusTitleEl = document.getElementById("status-title");
+    const statusTextEl = document.getElementById("status-text");
+    const gpsDistText = document.getElementById("gps-dist-text");
+    const stationsContainer = document.getElementById("stations-container");
+    const arrowsContainer = document.getElementById("arrows-container");
+
+    // 計算距離 (Haversine Formula)
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371e3;
+      const φ1 = lat1 * Math.PI / 180;
+      const φ2 = lat2 * Math.PI / 180;
+      const Δφ = (lat2 - lat1) * Math.PI / 180;
+      const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+      const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ/2) * Math.sin(Δλ/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return Math.round(R * c);
+    }
+
+    // 啟動 / 停止 出勤定位 (HTML5 Geolocation)
+    function toggleDutyStatus() {
+      const dutyBadge = document.getElementById("duty-badge");
+      const dutyBtn = document.getElementById("btn-duty-toggle");
+
+      if (!isDutyOn) {
+        // 開啟定位
+        if ("geolocation" in navigator) {
+          watchPositionId = navigator.geolocation.watchPosition(
+            (position) => {
+              currentRealCoords.lat = position.coords.latitude;
+              currentRealCoords.lng = position.coords.longitude;
+              document.getElementById("driver-coords-info").textContent = 
+                `即時座標：Lat ${currentRealCoords.lat.toFixed(5)}, Lng ${currentRealCoords.lng.toFixed(5)}`;
+              
+              // 觸發前台 UI 重新繪製與距離計算
+              updateDisplayUI();
+            },
+            (error) => {
+              alert(`GPS 定位取得失敗 (${error.message})，請確認手機已授予定位權限與開啟 GPS 功能。`);
+            },
+            { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+          );
+
+          isDutyOn = true;
+          dutyBadge.textContent = "🟢 出勤定位中";
+          dutyBadge.className = "duty-status-badge duty-on";
+          dutyBtn.textContent = "⏸️ 下班 / 停止定位";
+          dutyBtn.className = "duty-btn btn-stop-duty";
+        } else {
+          alert("此裝置或瀏覽器不支援 GPS 定位功能。");
+        }
+      } else {
+        // 關閉定位
+        if (watchPositionId !== null) {
+          navigator.geolocation.clearWatch(watchPositionId);
+          watchPositionId = null;
+        }
+        isDutyOn = false;
+        dutyBadge.textContent = "未出勤 (定位關閉)";
+        dutyBadge.className = "duty-status-badge duty-off";
+        dutyBtn.textContent = "▶️ 開始出勤 (開啟手機 GPS)";
+        dutyBtn.className = "duty-btn btn-start-duty";
+        document.getElementById("driver-coords-info").textContent = "即時座標：--";
+        gpsDistText.textContent = "GPS 狀態: 未開始出勤";
+        statusTextEl.textContent = "等待駕駛員於後台開啟出勤定位...";
+      }
+    }
+
+    // 初始化後台選單
+    function initAdminOptions() {
+      adminTaskSelect.innerHTML = "";
+      for (let key in taskDatabase) {
+        adminTaskSelect.innerHTML += `<option value="${key}">${taskDatabase[key].name}</option>`;
+      }
+    }
+
+    // 建構前台路線 UI
+    function buildFrontendUI() {
+      const task = taskDatabase[currentTaskKey];
+      const stations = task.stations;
+      const total = stations.length;
+
+      currentTaskNameEl.textContent = task.name;
+      trainEl.textContent = task.icon;
+      stationsContainer.innerHTML = "";
+      arrowsContainer.innerHTML = "";
+
+      stations.forEach((st, idx) => {
+        const stNode = document.createElement("div");
+        stNode.className = "station-node";
+        stNode.id = `st-${idx}`;
+        stNode.innerHTML = `
+          <div class="station-circle"></div>
+          <div class="station-name">${st.name}</div>
+          <div class="station-code">${String(idx+1).padStart(2,'0')}</div>
+        `;
+        stationsContainer.appendChild(stNode);
+      });
+
+      for (let i = 0; i < total - 1; i++) {
+        const arrow = document.createElement("span");
+        arrow.className = "segment-arrow";
+        arrow.id = `arrow-${i}`;
+        arrow.innerHTML = "&gt;&gt;&gt;";
+        arrowsContainer.appendChild(arrow);
+      }
+
+      updateDisplayUI();
+    }
+
+    // 更新前台狀態顯示
+    function updateDisplayUI() {
+      if (!isDutyOn) return;
+
+      const task = taskDatabase[currentTaskKey];
+      const stations = task.stations;
+      const total = stations.length;
+
+      const targetSt = stations[currentStationIndex];
+      const dist = calculateDistance(currentRealCoords.lat, currentRealCoords.lng, targetSt.lat, targetSt.lng);
+
+      // 判斷是否進入誤差範圍
+      if (dist <= targetSt.radius) {
+        isArrivedState = true;
+      }
+
+      let posPercentage = 0;
+      if (currentStationIndex === 0) {
+        posPercentage = isArrivedState ? 0 : 0;
+      } else {
+        const prevPos = ((currentStationIndex - 1) / (total - 1)) * 100;
+        const curPos = (currentStationIndex / (total - 1)) * 100;
+        posPercentage = isArrivedState ? curPos : prevPos + (curPos - prevPos) * 0.5;
+      }
+
+      trainEl.style.left = posPercentage + "%";
+      progressBar.style.width = posPercentage + "%";
+
+      if (currentStationIndex === total - 1 && isArrivedState) {
+        targetStationEl.textContent = "任務完成";
+        statusTitleEl.textContent = "狀態 Status";
+        statusTextEl.textContent = `✔ 本班次 ${task.name} 順利完成！`;
+        statusTextEl.classList.add("completed-banner");
+        gpsDistText.textContent = `已抵達終點站 (${targetSt.name})`;
+      } else if (isArrivedState) {
+        targetStationEl.textContent = targetSt.name;
+        statusTitleEl.textContent = "本站 Current Stop";
+        statusTextEl.textContent = `已進入 ${targetSt.name} (定位誤差內，到站中)`;
+        statusTextEl.classList.remove("completed-banner");
+        gpsDistText.textContent = `距離站點: ${dist}m (進入 ${targetSt.radius}m 圍欄)`;
+        
+        // 抵達該站後自動切換關注下一站 (5秒後)
+        setTimeout(() => {
+          if (currentStationIndex < total - 1 && isArrivedState) {
+            currentStationIndex++;
+            isArrivedState = false;
+            updateDisplayUI();
+          }
+        }, 5000);
+
+      } else {
+        targetStationEl.textContent = targetSt.name;
+        statusTitleEl.textContent = "下一站 Next Stop";
+        statusTextEl.textContent = `前往 ${targetSt.name} 中...`;
+        statusTextEl.classList.remove("completed-banner");
+        gpsDistText.textContent = `GPS 距離下一站: ${dist}m (誤差範圍 ${targetSt.radius}m)`;
+      }
+
+      for (let i = 0; i < total - 1; i++) {
+        const arrowEl = document.getElementById(`arrow-${i}`);
+        if (arrowEl) {
+          if (!isArrivedState && i === currentStationIndex - 1) {
+            arrowEl.classList.add("active");
+          } else {
+            arrowEl.classList.remove("active");
+          }
+        }
+      }
+
+      for (let i = 0; i < total; i++) {
+        const stNode = document.getElementById(`st-${i}`);
+        if (stNode) {
+          stNode.classList.remove("active", "passed", "blink");
+          if (i < currentStationIndex || (i === currentStationIndex && isArrivedState)) {
+            stNode.classList.add("passed");
+          } else if (i === currentStationIndex) {
+            stNode.classList.add("active");
+            if (!isArrivedState) stNode.classList.add("blink");
+          }
+        }
+      }
+    }
+
+    // 後台選單邏輯
+    function toggleAdminPanel() {
+      const panel = document.getElementById("admin-panel");
+      panel.style.display = panel.style.display === "block" ? "none" : "block";
+      if (panel.style.display === "block") loadAdminTaskData();
+    }
+
+    function loadAdminTaskData() {
+      const selectedKey = adminTaskSelect.value;
+      const stations = taskDatabase[selectedKey].stations;
+      const tbody = document.getElementById("admin-gps-tbody");
+      tbody.innerHTML = "";
+
+      stations.forEach((st, idx) => {
+        tbody.innerHTML += `
+          <tr>
+            <td>${idx + 1}</td>
+            <td><input class="gps-input" type="text" value="${st.name}" id="st-name-${idx}"></td>
+            <td><input class="gps-input" type="number" step="0.0001" value="${st.lat}" id="st-lat-${idx}"></td>
+            <td><input class="gps-input" type="number" step="0.0001" value="${st.lng}" id="st-lng-${idx}"></td>
+            <td><input class="gps-input" type="number" value="${st.radius}" id="st-rad-${idx}"></td>
+          </tr>
+        `;
+      });
+    }
+
+    function saveAndApplyTask() {
+      const selectedKey = adminTaskSelect.value;
+      const stations = taskDatabase[selectedKey].stations;
+
+      stations.forEach((st, idx) => {
+        st.name = document.getElementById(`st-name-${idx}`).value;
+        st.lat = parseFloat(document.getElementById(`st-lat-${idx}`).value);
+        st.lng = parseFloat(document.getElementById(`st-lng-${idx}`).value);
+        st.radius = parseInt(document.getElementById(`st-rad-${idx}`).value);
+      });
+
+      currentTaskKey = selectedKey;
+      currentStationIndex = 0;
+      isArrivedState = false;
+      buildFrontendUI();
+
+      alert(`設定已儲存！前台任務切換為：${taskDatabase[selectedKey].name}`);
+    }
+
+    setInterval(() => {
+      const now = new Date();
+      document.getElementById("current-time").textContent = 
+        `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    }, 1000);
+
+    initAdminOptions();
+    buildFrontendUI();
+  </script>
+</body>
+</html>
