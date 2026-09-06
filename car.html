@@ -172,7 +172,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, set, update, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getDatabase, ref, set, update, onValue, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBTX7owI7jfp_oyIHkMLT5GK-I-YLY_tyc",
@@ -293,18 +293,26 @@
       }
     }
 
-    // 監聽雲端資料變動
-    onValue(busRef, (snapshot) => {
-      const data = snapshot.val();
-      if (!data) {
-        // 若雲端沒有資料，進行初次初始化
-        update(busRef, {
+    // 預先用本地預設值載入 UI，避免畫面空白
+    initAdminOptions();
+    buildFrontendUI();
+    updateDisplayUI();
+
+    // 檢查雲端初始狀態，若無資料直接寫入預設結構
+    get(busRef).then((snapshot) => {
+      if (!snapshot.exists()) {
+        set(busRef, {
           currentTaskKey: "elder",
           taskDatabase: defaultTasks,
           location: { lat: 0, lng: 0, isDutyOn: false, timestamp: Date.now() }
         });
-        return;
       }
+    });
+
+    // 監聽雲端即時更新
+    onValue(busRef, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
 
       let needRebuild = false;
 
@@ -333,7 +341,6 @@
         buildFrontendUI();
       }
 
-      // 強制觸發一次進度與距離運算
       updateDisplayUI();
     });
 
@@ -382,7 +389,6 @@
       const stations = task.stations;
       const total = stations.length;
 
-      // 邊界防護：防止索引超出長度
       if (currentStationIndex >= total) {
         currentStationIndex = 0;
       }
@@ -392,6 +398,9 @@
         statusTextEl.textContent = "等待駕駛員於後台開啟出勤定位...";
         progressBar.style.width = "0%";
         trainEl.style.left = "0%";
+        
+        targetStationEl.textContent = stations[0] ? stations[0].name : "--";
+        statusTitleEl.textContent = "下一站 Next Stop";
         return;
       }
 
@@ -405,8 +414,6 @@
         const prevPos = ((currentStationIndex - 1) / (total - 1)) * 100;
         const curPos = (currentStationIndex / (total - 1)) * 100;
         posPercentage = isArrivedState ? curPos : prevPos + (curPos - prevPos) * 0.5;
-      } else {
-        posPercentage = isArrivedState ? 0 : 0;
       }
 
       trainEl.style.left = posPercentage + "%";
@@ -456,7 +463,6 @@
       if (panel.style.display === "block") loadAdminTaskData();
     });
 
-    // 切換下拉選單時，同步廣播並重置前台狀態
     adminTaskSelect.addEventListener("change", () => {
       const selectedKey = adminTaskSelect.value;
       currentTaskKey = selectedKey;
