@@ -82,7 +82,6 @@
     .btn-start-duty { background-color: #27ae60; color: white; }
     .btn-stop-duty { background-color: #c0392b; color: white; }
 
-    /* 修復跨平台 Select 下拉選單文字隱形問題 */
     .admin-select { padding: 8px 12px; font-size: 0.95rem; font-weight: bold; color: #000000 !important; background-color: #ffffff !important; border: 2px solid var(--primary-blue); border-radius: 4px; outline: none; margin-bottom: 10px; width: 100%; max-width: 350px; cursor: pointer; }
     .admin-select option { color: #000000 !important; background-color: #ffffff !important; font-weight: bold; }
     
@@ -92,7 +91,6 @@
     .gps-table th { background-color: #2c3e50; }
     .gps-input { width: 100%; background-color: #2a2a2a; border: 1px solid #555; color: #fff; padding: 4px; border-radius: 3px; text-align: center; }
 
-    /* RWD 媒體查詢 (手機版切換為直排) */
     @media (max-width: 768px) {
       .metro-display { flex-direction: column; }
       .left-panel { width: 100%; border-right: none; border-bottom: 3px solid #ccc; }
@@ -111,7 +109,6 @@
     <button class="mode-btn" id="btn-toggle-admin">🔧 控制後台 / 駕駛員設定</button>
   </div>
 
-  <!-- 看板顯示區 -->
   <div class="metro-display" id="frontend-display">
     <div class="left-panel">
       <div>
@@ -153,7 +150,6 @@
     </div>
   </div>
 
-  <!-- 後台控制與駕駛員 GPS 廣播控制 -->
   <div class="admin-panel" id="admin-panel">
     <div class="admin-title">📱 駕駛員出勤定位發射器 (請於手機開啟)</div>
     
@@ -260,7 +256,6 @@
     const stationsContainer = document.getElementById("stations-container");
     const arrowsContainer = document.getElementById("arrows-container");
 
-    // 兩點距離計算函數
     function calculateDistance(lat1, lon1, lat2, lon2) {
       if (!lat1 || !lon1 || !lat2 || !lon2) return 999999;
       const R = 6371e3;
@@ -272,7 +267,6 @@
       return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
     }
 
-    // 填入 Select 下拉選單選項目
     function renderTaskSelectOptions() {
       adminTaskSelect.innerHTML = "";
       for (let key in taskDatabase) {
@@ -284,7 +278,7 @@
       adminTaskSelect.value = currentTaskKey;
     }
 
-    // 核心資料更新邏輯
+    // 核心資料更新邏輯 (修復局部更新覆蓋問題)
     function handleDataUpdate(data) {
       if (!data) return;
 
@@ -301,8 +295,8 @@
       }
 
       if (data.location) {
-        currentRealCoords = { lat: data.location.lat, lng: data.location.lng };
-        isDutyOn = data.location.isDutyOn;
+        currentRealCoords = { lat: data.location.lat || 0, lng: data.location.lng || 0 };
+        isDutyOn = data.location.isDutyOn || false;
         const coordsEl = document.getElementById("driver-coords-info");
         if (coordsEl) {
           coordsEl.textContent = `雲端座標：Lat ${currentRealCoords.lat.toFixed(5)}, Lng ${currentRealCoords.lng.toFixed(5)}`;
@@ -315,12 +309,10 @@
       updateDisplayUI();
     }
 
-    // 初始化無延遲渲染
     renderTaskSelectOptions();
     buildFrontendUI();
     updateDisplayUI();
 
-    // 初始化 Firebase 資料與監聽
     get(busRef).then((snapshot) => {
       if (!snapshot.exists()) {
         set(busRef, {
@@ -339,14 +331,13 @@
       }
     });
 
-    // 手機 Screen Wake Lock (防休眠機制)
     async function requestWakeLock() {
       try {
         if ('wakeLock' in navigator) {
           wakeLock = await navigator.wakeLock.request('screen');
         }
       } catch (err) {
-        console.log("Wake Lock request failed:", err);
+        console.log("Wake Lock 失敗:", err);
       }
     }
 
@@ -356,26 +347,34 @@
       }
     }
 
-    // 駕駛員廣播開關
+    // 駕駛員廣播開關 (修復更新寫入問題)
     document.getElementById("btn-duty-toggle").addEventListener("click", () => {
       if (!isDutyOn) {
         if ("geolocation" in navigator) {
           requestWakeLock();
+          statusTextEl.textContent = "正在取得定位...";
+          
           watchPositionId = navigator.geolocation.watchPosition(
             (position) => {
               currentRealCoords.lat = position.coords.latitude;
               currentRealCoords.lng = position.coords.longitude;
               
-              set(ref(db, 'bus_DB03/location'), {
+              // 使用 update 僅更新 location 節點，防死結
+              update(ref(db, 'bus_DB03/location'), {
                 lat: currentRealCoords.lat,
                 lng: currentRealCoords.lng,
                 isDutyOn: true,
                 timestamp: Date.now()
               });
             },
-            (error) => { alert(`GPS 取得失敗，請確定已開啟手機定位權限: ${error.message}`); },
-            { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+            (error) => {
+              alert(`GPS 錯誤 (${error.code}): ${error.message}`);
+              updateDutyUI(false);
+              isDutyOn = false;
+            },
+            { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
           );
+          
           isDutyOn = true;
           updateDutyUI(true);
         } else {
@@ -406,7 +405,6 @@
       }
     }
 
-    // 建立前台站點捷運圖
     function buildFrontendUI() {
       const task = taskDatabase[currentTaskKey] || taskDatabase["elder"];
       if (!task) return;
@@ -435,7 +433,6 @@
       }
     }
 
-    // 刷新動態位置與邏輯
     function updateDisplayUI() {
       const task = taskDatabase[currentTaskKey] || taskDatabase["elder"];
       if (!task) return;
@@ -508,7 +505,6 @@
       }
     }
 
-    // 控制面板開關
     document.getElementById("btn-toggle-admin").addEventListener("click", () => {
       const panel = document.getElementById("admin-panel");
       panel.style.display = panel.style.display === "block" ? "none" : "block";
@@ -518,7 +514,6 @@
       }
     });
 
-    // 任務切換事件
     adminTaskSelect.addEventListener("change", () => {
       const selectedKey = adminTaskSelect.value;
       currentTaskKey = selectedKey;
@@ -532,7 +527,6 @@
       loadAdminTaskData();
     });
 
-    // 載入表格站點設定
     function loadAdminTaskData() {
       const selectedKey = adminTaskSelect.value || "elder";
       const stations = (taskDatabase[selectedKey] || defaultTasks["elder"]).stations;
@@ -552,7 +546,6 @@
       });
     }
 
-    // 儲存修改至 Firebase
     document.getElementById("btn-save-task").addEventListener("click", () => {
       const selectedKey = adminTaskSelect.value || "elder";
       const task = taskDatabase[selectedKey] || defaultTasks[selectedKey];
@@ -572,7 +565,6 @@
       alert(`設定已成功寫入 Firebase 雲端！任務：${task.name}`);
     });
 
-    // 時鐘
     setInterval(() => {
       const now = new Date();
       document.getElementById("current-time").textContent = 
