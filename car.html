@@ -69,7 +69,9 @@
     .btn-start-duty { background-color: #27ae60; color: white; }
     .btn-stop-duty { background-color: #c0392b; color: white; }
 
-    .admin-select { padding: 8px 12px; font-size: 0.95rem; font-weight: bold; color: #2c3e50; background-color: #fff; border: 2px solid #3498db; border-radius: 4px; outline: none; margin-bottom: 10px; width: 100%; max-width: 350px; cursor: pointer; }
+    /* 下拉選單樣式修復 */
+    .admin-select { padding: 8px 12px; font-size: 0.95rem; font-weight: bold; color: #000000; background-color: #ffffff; border: 2px solid #3498db; border-radius: 4px; outline: none; margin-bottom: 10px; width: 100%; max-width: 350px; cursor: pointer; }
+    .admin-select option { color: #000000; background-color: #ffffff; }
     
     .table-responsive { width: 100%; overflow-x: auto; }
     .gps-table { width: 100%; min-width: 600px; border-collapse: collapse; margin-top: 10px; color: #fff; }
@@ -251,6 +253,17 @@
       return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
     }
 
+    function initAdminOptions() {
+      adminTaskSelect.innerHTML = "";
+      for (let key in taskDatabase) {
+        const option = document.createElement("option");
+        option.value = key;
+        option.textContent = taskDatabase[key].name;
+        adminTaskSelect.appendChild(option);
+      }
+      adminTaskSelect.value = currentTaskKey;
+    }
+
     function handleDataUpdate(data) {
       if (!data) return;
 
@@ -279,12 +292,11 @@
       updateDisplayUI();
     }
 
-    // 初始化頁面預設畫面，防止畫面停留在「載入中...」
+    // 初始化預設渲染
     initAdminOptions();
     buildFrontendUI();
     updateDisplayUI();
 
-    // 強制進行初始寫入，確保資料庫建立基礎節點
     get(busRef).then((snapshot) => {
       if (!snapshot.exists()) {
         set(busRef, {
@@ -297,7 +309,6 @@
       }
     });
 
-    // 即時監看 Firebase
     onValue(busRef, (snapshot) => {
       if (snapshot.exists()) {
         handleDataUpdate(snapshot.val());
@@ -347,17 +358,6 @@
         dutyBtn.textContent = "▶️ 開始出勤 (開啟手機 GPS)";
         dutyBtn.className = "duty-btn btn-start-duty";
       }
-    }
-
-    function initAdminOptions() {
-      adminTaskSelect.innerHTML = "";
-      for (let key in taskDatabase) {
-        const option = document.createElement("option");
-        option.value = key;
-        option.textContent = taskDatabase[key].name;
-        adminTaskSelect.appendChild(option);
-      }
-      adminTaskSelect.value = currentTaskKey;
     }
 
     function buildFrontendUI() {
@@ -465,7 +465,10 @@
     document.getElementById("btn-toggle-admin").addEventListener("click", () => {
       const panel = document.getElementById("admin-panel");
       panel.style.display = panel.style.display === "block" ? "none" : "block";
-      if (panel.style.display === "block") loadAdminTaskData();
+      if (panel.style.display === "block") {
+        initAdminOptions();
+        loadAdminTaskData();
+      }
     });
 
     adminTaskSelect.addEventListener("change", () => {
