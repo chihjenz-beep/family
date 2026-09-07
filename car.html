@@ -47,54 +47,88 @@
     .bottom-info { display: flex; justify-content: space-between; align-items: center; background-color: #222; color: #fff; padding: 6px 12px; border-radius: 4px; font-family: monospace; font-size: 1.1rem; margin-top: 10px; }
     .car-num span { font-weight: bold; color: #ffca28; }
 
-    /* Track Panel */
-    .right-panel { width: 68%; background-color: #0b192c; position: relative; display: flex; flex-direction: column; justify-content: center; padding: 25px 20px; min-height: 220px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .track-container { position: relative; height: 120px; display: flex; align-items: center; min-width: 100%; }
-    .track-line { position: absolute; width: 100%; height: 8px; background-color: #555; z-index: 1; top: 18px; }
-    .track-progress { position: absolute; height: 8px; background-color: #f39c12; width: 0%; z-index: 2; transition: width 0.5s linear; top: 18px; }
+    /* Track Panel - 多列網格與自動折行設定 */
+    .right-panel { width: 68%; background-color: #0b192c; position: relative; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; overflow: hidden; }
+    
+    .stations-wrapper { 
+      display: flex; 
+      flex-wrap: wrap; 
+      gap: 12px 10px; 
+      width: 100%; 
+      justify-content: flex-start; 
+      align-items: flex-start;
+    }
 
-    /* 箭頭動畫與容器設定 */
-    .arrows-wrapper { position: absolute; width: 100%; display: flex; justify-content: space-between; z-index: 2; padding: 0 20px; top: 12px; pointer-events: none; }
-    .segment-arrow { color: #34495e; font-size: 1rem; font-weight: 900; transition: color 0.3s; line-height: 1; letter-spacing: -1px; display: inline-block; }
+    .station-card { 
+      display: flex; 
+      align-items: center; 
+      background: rgba(255, 255, 255, 0.05); 
+      border: 1px solid rgba(255, 255, 255, 0.15); 
+      border-radius: 6px; 
+      padding: 8px 10px; 
+      min-width: 130px; 
+      flex: 1 1 calc(25% - 10px); 
+      max-width: 180px; 
+      position: relative; 
+      transition: all 0.3s;
+    }
+
+    .station-card.active { 
+      background: rgba(231, 76, 60, 0.2); 
+      border-color: #e74c3c; 
+      box-shadow: 0 0 10px rgba(231, 76, 60, 0.4); 
+    }
+
+    .station-card.passed { 
+      background: rgba(127, 140, 141, 0.1); 
+      border-color: #4a5568; 
+      opacity: 0.7;
+    }
+
+    .station-circle { 
+      width: 14px; 
+      height: 14px; 
+      background-color: #fff; 
+      border: 3px solid var(--accent-orange); 
+      border-radius: 50%; 
+      flex-shrink: 0; 
+      margin-right: 8px; 
+    }
+    .station-card.active .station-circle { background-color: #e74c3c; border-color: #fff; }
+    .station-card.passed .station-circle { background-color: #7f8c8d; border-color: #4a5568; }
+
+    .station-info { display: flex; flex-direction: column; flex-grow: 1; overflow: hidden; }
+    .station-name { 
+      color: #fff; 
+      font-weight: bold; 
+      font-size: 0.8rem; 
+      line-height: 1.25; 
+      white-space: normal; 
+      word-break: break-all; 
+    }
+    .station-code { font-size: 0.65rem; color: #aaa; margin-top: 2px; }
+
+    .segment-arrow { 
+      color: #34495e; 
+      font-size: 0.85rem; 
+      font-weight: 900; 
+      margin-left: 6px; 
+      flex-shrink: 0; 
+      letter-spacing: -1px; 
+    }
     .segment-arrow.active { 
       color: #00d2d3; 
-      text-shadow: 0 0 10px #00d2d3; 
+      text-shadow: 0 0 8px #00d2d3; 
       animation: arrowFlow 0.8s infinite linear; 
     }
 
     @keyframes arrowFlow {
-      0% { opacity: 0.2; transform: translateX(-4px); }
+      0% { opacity: 0.3; transform: translateX(-2px); }
       50% { opacity: 1; transform: translateX(2px); }
-      100% { opacity: 0.2; transform: translateX(6px); }
+      100% { opacity: 0.3; transform: translateX(4px); }
     }
 
-    .stations-wrapper { position: absolute; width: 100%; display: flex; justify-content: space-between; z-index: 3; top: 12px; }
-    .station-node { display: flex; flex-direction: column; align-items: center; position: relative; flex-shrink: 0; min-width: 70px; max-width: 90px; }
-    .station-circle { width: 14px; height: 14px; background-color: #fff; border: 3px solid var(--accent-orange); border-radius: 50%; transition: all 0.3s; flex-shrink: 0; }
-    .station-node.active .station-circle { background-color: #e74c3c; border-color: #fff; box-shadow: 0 0 10px #e74c3c; }
-    .station-node.passed .station-circle { background-color: #7f8c8d; border-color: #4a5568; }
-    
-    /* 站名換行與邊界控制 */
-    .station-name { 
-      margin-top: 8px; 
-      color: #fff; 
-      font-weight: bold; 
-      font-size: 0.75rem; 
-      white-space: normal; 
-      word-wrap: break-word; 
-      word-break: break-all; 
-      text-align: center; 
-      line-height: 1.25; 
-      max-width: 80px; 
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-    .station-code { font-size: 0.65rem; color: #aaa; margin-top: 3px; }
-
-    .train-icon { position: absolute; top: -10px; left: 0%; transform: translateX(-50%); font-size: 1.3rem; transition: left 0.5s linear; z-index: 4; }
-    .status-banner { position: relative; margin-top: 20px; text-align: center; background-color: rgba(255, 255, 255, 0.1); color: #f1c40f; padding: 6px; border-radius: 4px; font-size: 0.85rem; }
+    .status-banner { margin-top: 15px; text-align: center; background-color: rgba(255, 255, 255, 0.1); color: #f1c40f; padding: 8px; border-radius: 4px; font-size: 0.85rem; }
     .completed-banner { background-color: #27ae60 !important; color: #fff !important; font-weight: bold; }
 
     /* Admin Panel */
@@ -122,9 +156,8 @@
     @media (max-width: 768px) {
       .metro-display { flex-direction: column; }
       .left-panel { width: 100%; border-right: none; border-bottom: 3px solid #ccc; }
-      .right-panel { width: 100%; min-height: 200px; padding: 20px 15px; }
-      .station-name { font-size: 0.7rem; max-width: 70px; }
-      .segment-arrow { font-size: 0.85rem; }
+      .right-panel { width: 100%; }
+      .station-card { flex: 1 1 calc(50% - 10px); max-width: none; }
     }
   </style>
 </head>
@@ -165,13 +198,7 @@
     </div>
 
     <div class="right-panel">
-      <div class="track-container" id="track-container">
-        <div class="track-line"></div>
-        <div class="track-progress" id="progress-bar"></div>
-        <div class="arrows-wrapper" id="arrows-container"></div>
-        <div class="train-icon" id="train">🚐</div>
-        <div class="stations-wrapper" id="stations-container"></div>
-      </div>
+      <div class="stations-wrapper" id="stations-container"></div>
       <div class="status-banner" id="status-text">連線中...</div>
     </div>
   </div>
@@ -288,15 +315,11 @@
 
     const adminTaskSelect = document.getElementById("admin-task-select");
     const currentTaskNameEl = document.getElementById("current-task-name");
-    const trainEl = document.getElementById("train");
-    const progressBar = document.getElementById("progress-bar");
     const targetStationEl = document.getElementById("target-station");
     const statusTitleEl = document.getElementById("status-title");
     const statusTextEl = document.getElementById("status-text");
     const gpsDistText = document.getElementById("gps-dist-text");
     const stationsContainer = document.getElementById("stations-container");
-    const arrowsContainer = document.getElementById("arrows-container");
-    const trackContainer = document.getElementById("track-container");
 
     function calculateDistance(lat1, lon1, lat2, lon2) {
       if (!lat1 || !lon1 || !lat2 || !lon2) return 999999;
@@ -458,32 +481,27 @@
       const stations = task.stations;
       const total = stations.length;
 
-      /* 保留足夠單站寬度 (每站 90px)，站名長時可自動換行但不擠壓 */
-      const minStationWidth = 90;
-      const calculatedWidth = total * minStationWidth;
-      trackContainer.style.minWidth = calculatedWidth > 0 ? `${calculatedWidth}px` : "100%";
-
       currentTaskNameEl.textContent = task.name;
-      trainEl.textContent = task.icon || "🚐";
       stationsContainer.innerHTML = "";
-      arrowsContainer.innerHTML = "";
 
       stations.forEach((st, idx) => {
-        const stNode = document.createElement("div");
-        stNode.className = "station-node";
-        stNode.id = `st-${idx}`;
-        stNode.innerHTML = `<div class="station-circle"></div><div class="station-name" title="${st.name}">${st.name}</div><div class="station-code">${String(idx+1).padStart(2,'0')}</div>`;
-        stationsContainer.appendChild(stNode);
-      });
+        const card = document.createElement("div");
+        card.className = "station-card";
+        card.id = `st-${idx}`;
 
-      /* 建立站點之間的 >> 符號 */
-      for (let i = 0; i < total - 1; i++) {
-        const arrow = document.createElement("span");
-        arrow.className = "segment-arrow";
-        arrow.id = `arrow-${i}`;
-        arrow.innerHTML = "&gt;&gt;";
-        arrowsContainer.appendChild(arrow);
-      }
+        const isLast = idx === total - 1;
+        const arrowHtml = isLast ? '' : `<span class="segment-arrow" id="arrow-${idx}">&gt;&gt;</span>`;
+
+        card.innerHTML = `
+          <div class="station-circle"></div>
+          <div class="station-info">
+            <div class="station-name">${st.name}</div>
+            <div class="station-code">${String(idx+1).padStart(2,'0')}</div>
+          </div>
+          ${arrowHtml}
+        `;
+        stationsContainer.appendChild(card);
+      });
     }
 
     function updateDisplayUI() {
@@ -497,9 +515,6 @@
       if (!isDutyOn) {
         gpsDistText.textContent = "廣播狀態: 駕駛員未開班";
         statusTextEl.textContent = "等待駕駛員開啟 GPS 廣播...";
-        progressBar.style.width = "0%";
-        trainEl.style.left = "0%";
-        
         targetStationEl.textContent = stations[0] ? stations[0].name : "--";
         statusTitleEl.textContent = "首站 Starting Point";
         return;
@@ -509,16 +524,6 @@
       const dist = calculateDistance(currentRealCoords.lat, currentRealCoords.lng, targetSt.lat, targetSt.lng);
 
       if (dist <= targetSt.radius) isArrivedState = true;
-
-      let posPercentage = 0;
-      if (currentStationIndex > 0) {
-        const prevPos = ((currentStationIndex - 1) / (total - 1)) * 100;
-        const curPos = (currentStationIndex / (total - 1)) * 100;
-        posPercentage = isArrivedState ? curPos : prevPos + (curPos - prevPos) * 0.5;
-      }
-
-      trainEl.style.left = posPercentage + "%";
-      progressBar.style.width = posPercentage + "%";
 
       if (currentStationIndex === total - 1 && isArrivedState) {
         targetStationEl.textContent = "任務完成";
@@ -540,20 +545,19 @@
         gpsDistText.textContent = `距離下一站: ${dist}m`;
       }
 
-      /* 箭頭動畫觸發邏輯 */
       for (let i = 0; i < total - 1; i++) {
         const arrowEl = document.getElementById(`arrow-${i}`);
         if (arrowEl) arrowEl.classList.toggle("active", !isArrivedState && i === currentStationIndex - 1);
       }
 
       for (let i = 0; i < total; i++) {
-        const stNode = document.getElementById(`st-${i}`);
-        if (stNode) {
-          stNode.classList.remove("active", "passed", "blink");
-          if (i < currentStationIndex || (i === currentStationIndex && isArrivedState)) stNode.classList.add("passed");
-          else if (i === currentStationIndex) {
-            stNode.classList.add("active");
-            if (!isArrivedState) stNode.classList.add("blink");
+        const cardNode = document.getElementById(`st-${i}`);
+        if (cardNode) {
+          cardNode.classList.remove("active", "passed");
+          if (i < currentStationIndex || (i === currentStationIndex && isArrivedState)) {
+            cardNode.classList.add("passed");
+          } else if (i === currentStationIndex) {
+            cardNode.classList.add("active");
           }
         }
       }
