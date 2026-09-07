@@ -1,3 +1,8 @@
+The HTML code with the embedded Leaflet map and single-page GPS tracking system has been compiled below.
+
+You can copy this directly and save it as an `.html` file (e.g., `index.html`).
+
+```html
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -7,6 +12,9 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>平安家園公務車行車定位系統</title>
+
+  <!-- Leaflet.js 地圖樣式 -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   
   <style>
     :root {
@@ -47,7 +55,7 @@
     .bottom-info { display: flex; justify-content: space-between; align-items: center; background-color: #222; color: #fff; padding: 6px 12px; border-radius: 4px; font-family: monospace; font-size: 1.1rem; margin-top: 10px; }
     .car-num span { font-weight: bold; color: #ffca28; }
 
-    /* Track Panel - 多列網格與自動折行設定 */
+    /* Track Panel */
     .right-panel { width: 68%; background-color: #0b192c; position: relative; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; overflow: hidden; }
     
     .stations-wrapper { 
@@ -131,6 +139,38 @@
     .status-banner { margin-top: 15px; text-align: center; background-color: rgba(255, 255, 255, 0.1); color: #f1c40f; padding: 8px; border-radius: 4px; font-size: 0.85rem; }
     .completed-banner { background-color: #27ae60 !important; color: #fff !important; font-weight: bold; }
 
+    /* Map Panel */
+    .map-panel {
+      width: 100%;
+      max-width: 1050px;
+      margin-top: 15px;
+      background-color: #1e1e1e;
+      border: 2px solid #333;
+      border-radius: 8px;
+      padding: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    }
+    .map-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .map-title {
+      font-size: 1rem;
+      font-weight: bold;
+      color: var(--primary-blue);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    #map {
+      width: 100%;
+      height: 380px;
+      border-radius: 6px;
+      z-index: 1;
+    }
+
     /* Admin Panel */
     .admin-panel { width: 100%; max-width: 1050px; background-color: var(--admin-bg); border: 2px solid #444; border-radius: 8px; padding: 15px; display: none; margin-top: 10px; }
     .admin-title { font-size: 1.1rem; font-weight: bold; color: var(--primary-blue); margin-bottom: 12px; border-bottom: 1px solid #444; padding-bottom: 8px; }
@@ -158,6 +198,7 @@
       .left-panel { width: 100%; border-right: none; border-bottom: 3px solid #ccc; }
       .right-panel { width: 100%; }
       .station-card { flex: 1 1 calc(50% - 10px); max-width: none; }
+      #map { height: 280px; }
     }
   </style>
 </head>
@@ -179,7 +220,7 @@
         <div class="task-display-box">
           <span class="task-label">目前執行任務：</span>
           <div class="task-read-only">
-            <span id="current-task-name">接送長輩</span>
+            <span id="current-task-name">載送任務</span>
             <span style="font-size: 0.75rem; color: #7f8c8d;">雲端同步</span>
           </div>
         </div>
@@ -201,6 +242,14 @@
       <div class="stations-wrapper" id="stations-container"></div>
       <div class="status-banner" id="status-text">連線中...</div>
     </div>
+  </div>
+
+  <div class="map-panel">
+    <div class="map-header">
+      <div class="map-title">🗺️ 即時衛星定位與路線圖</div>
+      <span style="font-size:0.75rem; color:#aaa;">🔵 藍點：公務車位置 ｜ 🔴 紅點：目標站點</span>
+    </div>
+    <div id="map"></div>
   </div>
 
   <div class="admin-panel" id="admin-panel">
@@ -244,7 +293,7 @@
 
     <div id="import-panel" style="display:none; margin-top:12px; background-color:#2c3e50; padding:12px; border-radius:6px;">
       <p style="font-size:0.75rem; color:#bbb; margin-bottom:8px; line-height:1.5;">
-        到 Google 試算表選取「站名、緯度、經度」三欄資料（不含標題列），直接複製貼在下方即可。系統會自動補上第 4 欄「圍欄 (固定 50 公尺)」。亦支援帶有第 4 欄圍欄的資料。
+        到 Google 試算表選取「站名、緯度、經度」資料（不含標題列），直接複製貼在下方即可（支援逗號或 Tab 分隔）。
       </p>
       <textarea id="import-textarea" rows="6" style="width:100%; background-color:#2a2a2a; color:#fff; border:1px solid #555; border-radius:4px; padding:8px; font-family:monospace; font-size:0.8rem;" placeholder="布袋鎮公所,23.3768,120.1581&#10;高跟鞋教堂,23.3644,120.1492"></textarea>
       <div style="display:flex; gap:10px; margin-top:8px; flex-wrap:wrap;">
@@ -253,6 +302,8 @@
       </div>
     </div>
   </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -274,44 +325,37 @@
     const locationRef = ref(db, 'bus_DB03/location');
 
     const defaultTasks = {
-      elder: {
-        name: "接送長輩",
+      budai: {
+        name: "布袋巡迴專線",
         icon: "🚐",
         stations: [
-          { name: "診所發車", lat: 23.4601, lng: 120.2501, radius: 50 },
-          { name: "興中里",   lat: 23.4620, lng: 120.2530, radius: 50 },
-          { name: "岱江里",   lat: 23.4645, lng: 120.2560, radius: 50 },
-          { name: "岑海里",   lat: 23.4670, lng: 120.2590, radius: 50 },
-          { name: "振寮里",   lat: 23.4695, lng: 120.2620, radius: 50 },
-          { name: "新厝里",   lat: 23.4720, lng: 120.2650, radius: 50 }
-        ]
-      },
-      bento: {
-        name: "便當配送",
-        icon: "🍱",
-        stations: [
-          { name: "江山里", lat: 23.4500, lng: 120.2400, radius: 50 },
-          { name: "振寮里", lat: 23.4530, lng: 120.2430, radius: 50 },
-          { name: "永安里", lat: 23.4560, lng: 120.2460, radius: 50 },
-          { name: "興中里", lat: 23.4590, lng: 120.2490, radius: 50 },
-          { name: "岱江里", lat: 23.4620, lng: 120.2520, radius: 50 },
-          { name: "岑海里", lat: 23.4650, lng: 120.2550, radius: 50 },
-          { name: "新岑里", lat: 23.4680, lng: 120.2580, radius: 50 },
-          { name: "復興里", lat: 23.4710, lng: 120.2610, radius: 50 },
-          { name: "新店村", lat: 23.4740, lng: 120.2640, radius: 50 },
-          { name: "官和村", lat: 23.4770, lng: 120.2670, radius: 50 }
+          { name: "布袋鎮公所", lat: 23.3768, lng: 120.1581, radius: 50 },
+          { name: "慧眼照相館", lat: 23.3775, lng: 120.1578, radius: 50 },
+          { name: "嘉義區漁會", lat: 23.3761, lng: 120.1539, radius: 50 },
+          { name: "7-11布鹽門市", lat: 23.3789, lng: 120.1601, radius: 50 },
+          { name: "P2抽水站", lat: 23.3792, lng: 120.1555, radius: 50 },
+          { name: "POYA寶雅布袋店", lat: 23.3779, lng: 120.1612, radius: 50 },
+          { name: "唐漢海產行", lat: 23.3748, lng: 120.1528, radius: 50 },
+          { name: "P1抽水站", lat: 23.3732, lng: 120.1519, radius: 50 },
+          { name: "高跟鞋教堂", lat: 23.3644, lng: 120.1492, radius: 50 }
         ]
       }
     };
 
     let taskDatabase = defaultTasks;
-    let currentTaskKey = "elder";
+    let currentTaskKey = "budai";
     let currentStationIndex = 0;
     let isArrivedState = false;
     let isDutyOn = false;
     let watchPositionId = null;
     let wakeLock = null;
     let currentRealCoords = { lat: 0, lng: 0 };
+
+    let map = null;
+    let busMarker = null;
+    let routePolyline = null;
+    let stationMarkers = [];
+    let geofenceCircle = null;
 
     const adminTaskSelect = document.getElementById("admin-task-select");
     const currentTaskNameEl = document.getElementById("current-task-name");
@@ -320,6 +364,14 @@
     const statusTextEl = document.getElementById("status-text");
     const gpsDistText = document.getElementById("gps-dist-text");
     const stationsContainer = document.getElementById("stations-container");
+
+    function initMap() {
+      map = L.map('map').setView([23.3768, 120.1581], 14);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
+    }
 
     function calculateDistance(lat1, lon1, lat2, lon2) {
       if (!lat1 || !lon1 || !lat2 || !lon2) return 999999;
@@ -359,6 +411,7 @@
       renderTaskSelectOptions();
       buildFrontendUI();
       updateDisplayUI();
+      updateMapUI();
     }
 
     onValue(locationRef, (snapshot) => {
@@ -377,6 +430,7 @@
         
         updateDutyUI(isDutyOn);
         updateDisplayUI();
+        updateMapUI();
       }
     });
 
@@ -420,7 +474,7 @@
 
               const coordsEl = document.getElementById("driver-coords-info");
               if (coordsEl) {
-                coordsEl.textContent = `即時座標：Lat ${lat.toFixed(5)}, Lng ${lng.toFixed(5)}`;
+                coordsEl.textContent = `即時座標：Lat ${lat.toFixed(5)}, Lng ${lat.toFixed(5)}`;
               }
               
               update(locationRef, {
@@ -434,8 +488,8 @@
               let msg = "";
               switch(error.code) {
                 case error.PERMISSION_DENIED: msg = "使用者拒絕提供定位權限。"; break;
-                case error.POSITION_UNAVAILABLE: msg = "無法取得位置資訊（請至戶外或開窗處）。"; break;
-                case error.TIMEOUT: msg = "取得定位逾時，請重新再試。"; break;
+                case error.POSITION_UNAVAILABLE: msg = "無法取得位置資訊。"; break;
+                case error.TIMEOUT: msg = "取得定位逾時。"; break;
                 default: msg = error.message; break;
               }
               alert(`GPS 錯誤 (${error.code}): ${msg}`);
@@ -463,7 +517,7 @@
       const dutyBadge = document.getElementById("duty-badge");
       const dutyBtn = document.getElementById("btn-duty-toggle");
       if (status) {
-        dutyBadge.textContent = "🟢 正在對全網廣播 GPS 定位";
+        dutyBadge.textContent = "🟢 正在廣播 GPS 定位中";
         dutyBadge.className = "duty-status-badge duty-on";
         dutyBtn.textContent = "⏸️ 停止廣播 / 下班";
         dutyBtn.className = "duty-btn btn-stop-duty";
@@ -476,7 +530,7 @@
     }
 
     function buildFrontendUI() {
-      const task = taskDatabase[currentTaskKey] || taskDatabase["elder"];
+      const task = taskDatabase[currentTaskKey] || taskDatabase["budai"];
       if (!task) return;
       const stations = task.stations;
       const total = stations.length;
@@ -505,7 +559,7 @@
     }
 
     function updateDisplayUI() {
-      const task = taskDatabase[currentTaskKey] || taskDatabase["elder"];
+      const task = taskDatabase[currentTaskKey] || taskDatabase["budai"];
       if (!task) return;
       const stations = task.stations;
       const total = stations.length;
@@ -563,6 +617,76 @@
       }
     }
 
+    function updateMapUI() {
+      if (!map) return;
+
+      const task = taskDatabase[currentTaskKey] || taskDatabase["budai"];
+      if (!task || !task.stations || task.stations.length === 0) return;
+
+      stationMarkers.forEach(m => map.removeLayer(m));
+      stationMarkers = [];
+      if (routePolyline) map.removeLayer(routePolyline);
+      if (geofenceCircle) map.removeLayer(geofenceCircle);
+
+      const latLngs = task.stations.map(st => [st.lat, st.lng]);
+
+      routePolyline = L.polyline(latLngs, { color: '#e67e22', weight: 4, opacity: 0.8, dashArray: '8, 8' }).addTo(map);
+
+      task.stations.forEach((st, idx) => {
+        const isTarget = idx === currentStationIndex;
+        const markerColor = isTarget ? '#e74c3c' : '#34495e';
+        const markerRadius = isTarget ? 9 : 6;
+
+        const marker = L.circleMarker([st.lat, st.lng], {
+          radius: markerRadius,
+          fillColor: markerColor,
+          color: '#ffffff',
+          weight: 2,
+          fillOpacity: 0.9
+        }).addTo(map);
+
+        marker.bindPopup(`<b>${idx + 1}. ${st.name}</b><br>圍欄: ${st.radius}m`);
+        stationMarkers.push(marker);
+
+        if (isTarget) {
+          geofenceCircle = L.circle([st.lat, st.lng], {
+            radius: st.radius || 50,
+            color: '#3498db',
+            fillColor: '#3498db',
+            fillOpacity: 0.15,
+            weight: 1
+          }).addTo(map);
+        }
+      });
+
+      if (isDutyOn && currentRealCoords.lat !== 0 && currentRealCoords.lng !== 0) {
+        const busPos = [currentRealCoords.lat, currentRealCoords.lng];
+        if (!busMarker) {
+          busMarker = L.circleMarker(busPos, {
+            radius: 10,
+            fillColor: '#3498db',
+            color: '#ffffff',
+            weight: 3,
+            fillOpacity: 1
+          }).addTo(map);
+          busMarker.bindPopup('<b>🚌 公務車 DB03 (即時位置)</b>');
+        } else {
+          busMarker.setLatLng(busPos);
+        }
+      } else if (busMarker) {
+        map.removeLayer(busMarker);
+        busMarker = null;
+      }
+
+      if (latLngs.length > 0) {
+        const bounds = L.latLngBounds(latLngs);
+        if (isDutyOn && currentRealCoords.lat !== 0) {
+          bounds.extend([currentRealCoords.lat, currentRealCoords.lng]);
+        }
+        map.fitBounds(bounds, { padding: [30, 30] });
+      }
+    }
+
     document.getElementById("btn-toggle-admin").addEventListener("click", () => {
       const panel = document.getElementById("admin-panel");
       panel.style.display = panel.style.display === "block" ? "none" : "block";
@@ -582,12 +706,13 @@
 
       buildFrontendUI();
       updateDisplayUI();
+      updateMapUI();
       loadAdminTaskData();
     });
 
     function loadAdminTaskData() {
-      const selectedKey = adminTaskSelect.value || "elder";
-      const stations = (taskDatabase[selectedKey] || defaultTasks["elder"]).stations;
+      const selectedKey = adminTaskSelect.value || "budai";
+      const stations = (taskDatabase[selectedKey] || defaultTasks["budai"]).stations;
       const tbody = document.getElementById("admin-gps-tbody");
       tbody.innerHTML = "";
 
@@ -649,31 +774,23 @@
         const cleaned = cells.map(c => c.trim().replace(/^"|"$/g, ""));
 
         if (cleaned.length < 3) {
-          errors.push(`第 ${i + 1} 行欄位不足 3 欄，已略過：${line}`);
+          errors.push(`第 ${i + 1} 行欄位不足 3 欄：${line}`);
           return;
         }
 
         const [name, latStr, lngStr, radStr] = cleaned;
         const lat = parseFloat(latStr);
         const lng = parseFloat(lngStr);
-        
         let radius = parseInt(radStr);
-        if (isNaN(radius)) {
-          radius = 50;
-        }
+        if (isNaN(radius)) radius = 50;
 
         if (isNaN(lat) || isNaN(lng)) {
           if (i === 0) return;
-          errors.push(`第 ${i + 1} 行緯度/經度不是數字，已略過：${line}`);
+          errors.push(`第 ${i + 1} 行座標格式錯誤：${line}`);
           return;
         }
 
-        stations.push({
-          name: name || `站點${stations.length + 1}`,
-          lat,
-          lng,
-          radius: radius
-        });
+        stations.push({ name: name || `站點${stations.length + 1}`, lat, lng, radius });
       });
 
       return { stations, errors };
@@ -681,30 +798,22 @@
 
     function handleImport(append) {
       const text = document.getElementById("import-textarea").value;
-      if (!text.trim()) {
-        alert("請先貼上資料再匯入。");
-        return;
-      }
+      if (!text.trim()) { alert("請先貼上資料再匯入。"); return; }
 
       const { stations, errors } = parseStationText(text);
 
       if (stations.length === 0) {
-        alert("沒有解析到任何有效的站點資料，請確認格式為：站名、緯度、經度（以 Tab 或逗號分隔）。");
+        alert("未解析到有效站點資料。格式應為：站名,緯度,經度");
         return;
       }
 
-      if (!append) {
-        document.getElementById("admin-gps-tbody").innerHTML = "";
-      }
+      if (!append) document.getElementById("admin-gps-tbody").innerHTML = "";
 
       stations.forEach(st => appendStationRow(st));
       renumberStationRows();
 
-      let msg = `已匯入 ${stations.length} 個站點。`;
-      if (errors.length > 0) {
-        msg += `\n\n有 ${errors.length} 行被略過：\n` + errors.slice(0, 5).join("\n");
-        if (errors.length > 5) msg += `\n...（還有 ${errors.length - 5} 行）`;
-      }
+      let msg = `已成功匯入 ${stations.length} 個站點。`;
+      if (errors.length > 0) msg += `\n略過 ${errors.length} 行錯誤資料。`;
       alert(msg);
 
       document.getElementById("import-textarea").value = "";
@@ -715,7 +824,7 @@
     document.getElementById("btn-parse-import-append").addEventListener("click", () => handleImport(true));
 
     document.getElementById("btn-save-task").addEventListener("click", () => {
-      const selectedKey = adminTaskSelect.value || "elder";
+      const selectedKey = adminTaskSelect.value || "budai";
       const task = taskDatabase[selectedKey] || defaultTasks[selectedKey];
 
       const rows = document.querySelectorAll("#admin-gps-tbody tr");
@@ -736,7 +845,7 @@
       });
 
       if (hasError || newStations.length === 0) {
-        alert("請確認每一站的名稱、經緯度、圍欄數值都已正確填寫，不可留空。");
+        alert("請確認每一站的名稱、經緯度、圍欄數值都已正確填寫。");
         return;
       }
 
@@ -747,8 +856,10 @@
         taskDatabase: taskDatabase
       });
 
-      alert(`設定已成功寫入 Firebase 雲端！任務：${task.name}，共 ${newStations.length} 站。`);
+      alert(`設定已寫入雲端！任務：${task.name}，共 ${newStations.length} 站。`);
     });
+
+    initMap();
 
     setInterval(() => {
       const now = new Date();
@@ -758,3 +869,5 @@
   </script>
 </body>
 </html>
+
+```
