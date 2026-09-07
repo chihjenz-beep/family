@@ -244,9 +244,9 @@
 
     <div id="import-panel" style="display:none; margin-top:12px; background-color:#2c3e50; padding:12px; border-radius:6px;">
       <p style="font-size:0.75rem; color:#bbb; margin-bottom:8px; line-height:1.5;">
-        到 Google 試算表選取「站名、緯度、經度、圍欄(公尺)」這四欄資料（不含標題列），直接複製後貼在下方，再按「解析並匯入」。也支援逗號分隔的 CSV 格式。
+        到 Google 試算表選取「站名、緯度、經度」三欄資料（不含標題列），直接複製貼在下方即可。系統會自動補上第 4 欄「圍欄 (固定 50 公尺)」。亦支援帶有第 4 欄圍欄的資料。
       </p>
-      <textarea id="import-textarea" rows="6" style="width:100%; background-color:#2a2a2a; color:#fff; border:1px solid #555; border-radius:4px; padding:8px; font-family:monospace; font-size:0.8rem;" placeholder="江山里	23.4500	120.2400	50&#10;振寮里	23.4530	120.2430	50"></textarea>
+      <textarea id="import-textarea" rows="6" style="width:100%; background-color:#2a2a2a; color:#fff; border:1px solid #555; border-radius:4px; padding:8px; font-family:monospace; font-size:0.8rem;" placeholder="布袋鎮公所,23.3768,120.1581&#10;高跟鞋教堂,23.3644,120.1492"></textarea>
       <div style="display:flex; gap:10px; margin-top:8px; flex-wrap:wrap;">
         <button id="btn-parse-import" class="duty-btn btn-start-duty" style="font-size:0.8rem;">✅ 解析並匯入（取代目前站點）</button>
         <button id="btn-parse-import-append" class="duty-btn" style="background-color:#16a085; color:#fff; font-size:0.8rem;">➕ 解析並附加到目前站點</button>
@@ -648,15 +648,19 @@
         const cells = line.includes("\t") ? line.split("\t") : line.split(",");
         const cleaned = cells.map(c => c.trim().replace(/^"|"$/g, ""));
 
-        if (cleaned.length < 4) {
-          errors.push(`第 ${i + 1} 行欄位不足 4 欄，已略過：${line}`);
+        if (cleaned.length < 3) {
+          errors.push(`第 ${i + 1} 行欄位不足 3 欄，已略過：${line}`);
           return;
         }
 
         const [name, latStr, lngStr, radStr] = cleaned;
         const lat = parseFloat(latStr);
         const lng = parseFloat(lngStr);
-        const radius = parseInt(radStr);
+        
+        let radius = parseInt(radStr);
+        if (isNaN(radius)) {
+          radius = 50;
+        }
 
         if (isNaN(lat) || isNaN(lng)) {
           if (i === 0) return;
@@ -668,7 +672,7 @@
           name: name || `站點${stations.length + 1}`,
           lat,
           lng,
-          radius: isNaN(radius) ? 50 : radius
+          radius: radius
         });
       });
 
@@ -685,7 +689,7 @@
       const { stations, errors } = parseStationText(text);
 
       if (stations.length === 0) {
-        alert("沒有解析到任何有效的站點資料，請確認格式為：站名、緯度、經度、圍欄(公尺)，以 Tab 或逗號分隔。");
+        alert("沒有解析到任何有效的站點資料，請確認格式為：站名、緯度、經度（以 Tab 或逗號分隔）。");
         return;
       }
 
