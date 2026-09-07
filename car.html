@@ -183,7 +183,20 @@
     </div>
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
       <button id="btn-add-station" class="duty-btn" style="background-color:#2980b9; color:#fff; font-size:0.85rem;">➕ 新增站點</button>
+      <button id="btn-toggle-import" class="duty-btn" style="background-color:#8e44ad; color:#fff; font-size:0.85rem;">📋 從試算表匯入</button>
       <button id="btn-save-task" class="duty-btn btn-start-duty" style="font-size:0.85rem;">💾 儲存修改並同步至雲端</button>
+    </div>
+
+    <div id="import-panel" style="display:none; margin-top:12px; background-color:#2c3e50; padding:12px; border-radius:6px;">
+      <p style="font-size:0.75rem; color:#bbb; margin-bottom:8px; line-height:1.5;">
+        到 Google 試算表選取「站名、緯度、經度、圍欄(公尺)」這四欄資料（不含標題列），直接複製後貼在下方，再按「解析並匯入」。也支援逗號分隔的 CSV 格式。
+      </p>
+      <textarea id="import-textarea" rows="6" style="width:100%; background-color:#2a2a2a; color:#fff; border:1px solid #555; border-radius:4px; padding:8px; font-family:monospace; font-size:0.8rem;" placeholder="江山里	23.4500	120.2400	50
+振寮里	23.4530	120.2430	50"></textarea>
+      <div style="display:flex; gap:10px; margin-top:8px; flex-wrap:wrap;">
+        <button id="btn-parse-import" class="duty-btn btn-start-duty" style="font-size:0.8rem;">✅ 解析並匯入（取代目前站點）</button>
+        <button id="btn-parse-import-append" class="duty-btn" style="background-color:#16a085; color:#fff; font-size:0.8rem;">➕ 解析並附加到目前站點</button>
+      </div>
     </div>
   </div>
 
@@ -590,6 +603,84 @@
       appendStationRow(null);
       renumberStationRows();
     });
+
+    document.getElementById("btn-toggle-import").addEventListener("click", () => {
+      const panel = document.getElementById("import-panel");
+      panel.style.display = panel.style.display === "block" ? "none" : "block";
+    });
+
+    // 解析從試算表貼上的文字，支援 Tab（Google Sheets 複製）或逗號（CSV）分隔
+    // 每行格式：站名, 緯度, 經度, 圍欄(公尺)
+    function parseStationText(text) {
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+      const stations = [];
+      const errors = [];
+
+      lines.forEach((line, i) => {
+        const cells = line.includes("\t") ? line.split("\t") : line.split(",");
+        const cleaned = cells.map(c => c.trim().replace(/^"|"$/g, ""));
+
+        if (cleaned.length < 4) {
+          errors.push(`第 ${i + 1} 行欄位不足 4 欄，已略過：${line}`);
+          return;
+        }
+
+        const [name, latStr, lngStr, radStr] = cleaned;
+        const lat = parseFloat(latStr);
+        const lng = parseFloat(lngStr);
+        const radius = parseInt(radStr);
+
+        if (isNaN(lat) || isNaN(lng)) {
+          if (i === 0) return; // 第一行若不是數字，視為標題列，靜默略過
+          errors.push(`第 ${i + 1} 行緯度/經度不是數字，已略過：${line}`);
+          return;
+        }
+
+        stations.push({
+          name: name || `站點${stations.length + 1}`,
+          lat,
+          lng,
+          radius: isNaN(radius) ? 50 : radius
+        });
+      });
+
+      return { stations, errors };
+    }
+
+    function handleImport(append) {
+      const text = document.getElementById("import-textarea").value;
+      if (!text.trim()) {
+        alert("請先貼上資料再匯入。");
+        return;
+      }
+
+      const { stations, errors } = parseStationText(text);
+
+      if (stations.length === 0) {
+        alert("沒有解析到任何有效的站點資料，請確認格式為：站名、緯度、經度、圍欄(公尺)，以 Tab 或逗號分隔。");
+        return;
+      }
+
+      if (!append) {
+        document.getElementById("admin-gps-tbody").innerHTML = "";
+      }
+
+      stations.forEach(st => appendStationRow(st));
+      renumberStationRows();
+
+      let msg = `已匯入 ${stations.length} 個站點。`;
+      if (errors.length > 0) {
+        msg += `\n\n有 ${errors.length} 行被略過：\n` + errors.slice(0, 5).join("\n");
+        if (errors.length > 5) msg += `\n...（還有 ${errors.length - 5} 行）`;
+      }
+      alert(msg);
+
+      document.getElementById("import-textarea").value = "";
+      document.getElementById("import-panel").style.display = "none";
+    }
+
+    document.getElementById("btn-parse-import").addEventListener("click", () => handleImport(false));
+    document.getElementById("btn-parse-import-append").addEventListener("click", () => handleImport(true));
 
     document.getElementById("btn-save-task").addEventListener("click", () => {
       const selectedKey = adminTaskSelect.value || "elder";
