@@ -174,13 +174,17 @@
             <th>緯度 (Latitude)</th>
             <th>經度 (Longitude)</th>
             <th>到站圍欄 (公尺)</th>
+            <th>操作</th>
           </tr>
         </thead>
         <tbody id="admin-gps-tbody">
         </tbody>
       </table>
     </div>
-    <button id="btn-save-task" class="duty-btn btn-start-duty" style="margin-top:15px; font-size:0.85rem;">💾 儲存修改並同步至雲端</button>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
+      <button id="btn-add-station" class="duty-btn" style="background-color:#2980b9; color:#fff; font-size:0.85rem;">➕ 新增站點</button>
+      <button id="btn-save-task" class="duty-btn btn-start-duty" style="font-size:0.85rem;">💾 儲存修改並同步至雲端</button>
+    </div>
   </div>
 
   <script type="module">
@@ -343,6 +347,10 @@
           
           watchPositionId = navigator.geolocation.watchPosition(
             (position) => {
+              // 防呆：若使用者已按下「停止廣播」，忽略稍後才送達的殘留定位更新，
+              // 避免把資料庫的 isDutyOn 又蓋回 true。
+              if (!isDutyOn) return;
+
               const lat = position.coords.latitude;
               const lng = position.coords.longitude;
               
@@ -539,36 +547,84 @@
       const tbody = document.getElementById("admin-gps-tbody");
       tbody.innerHTML = "";
 
-      stations.forEach((st, idx) => {
-        tbody.innerHTML += `
-          <tr>
-            <td>${idx + 1}</td>
-            <td><input class="gps-input" type="text" value="${st.name}" id="st-name-${idx}"></td>
-            <td><input class="gps-input" type="number" step="0.0001" value="${st.lat}" id="st-lat-${idx}"></td>
-            <td><input class="gps-input" type="number" step="0.0001" value="${st.lng}" id="st-lng-${idx}"></td>
-            <td><input class="gps-input" type="number" value="${st.radius}" id="st-rad-${idx}"></td>
-          </tr>
-        `;
+      stations.forEach((st) => appendStationRow(st));
+    }
+
+    // 建立單一站點列，st 為 {name, lat, lng, radius}；不傳則建立空白列供新增使用
+    function appendStationRow(st) {
+      const tbody = document.getElementById("admin-gps-tbody");
+      const tr = document.createElement("tr");
+      const name = st ? st.name : "";
+      const lat = st ? st.lat : "";
+      const lng = st ? st.lng : "";
+      const radius = st ? st.radius : 50;
+
+      tr.innerHTML = `
+        <td class="st-order">${tbody.children.length + 1}</td>
+        <td><input class="gps-input st-name" type="text" value="${name}"></td>
+        <td><input class="gps-input st-lat" type="number" step="0.0001" value="${lat}"></td>
+        <td><input class="gps-input st-lng" type="number" step="0.0001" value="${lng}"></td>
+        <td><input class="gps-input st-rad" type="number" value="${radius}"></td>
+        <td><button type="button" class="duty-btn btn-stop-duty btn-del-station" style="padding:4px 10px; font-size:0.8rem;">🗑 刪除</button></td>
+      `;
+
+      tr.querySelector(".btn-del-station").addEventListener("click", () => {
+        if (document.querySelectorAll("#admin-gps-tbody tr").length <= 1) {
+          alert("至少要保留一個站點。");
+          return;
+        }
+        tr.remove();
+        renumberStationRows();
+      });
+
+      tbody.appendChild(tr);
+    }
+
+    function renumberStationRows() {
+      document.querySelectorAll("#admin-gps-tbody tr").forEach((tr, idx) => {
+        tr.querySelector(".st-order").textContent = idx + 1;
       });
     }
+
+    document.getElementById("btn-add-station").addEventListener("click", () => {
+      appendStationRow(null);
+      renumberStationRows();
+    });
 
     document.getElementById("btn-save-task").addEventListener("click", () => {
       const selectedKey = adminTaskSelect.value || "elder";
       const task = taskDatabase[selectedKey] || defaultTasks[selectedKey];
 
-      task.stations.forEach((st, idx) => {
-        st.name = document.getElementById(`st-name-${idx}`).value;
-        st.lat = parseFloat(document.getElementById(`st-lat-${idx}`).value);
-        st.lng = parseFloat(document.getElementById(`st-lng-${idx}`).value);
-        st.radius = parseInt(document.getElementById(`st-rad-${idx}`).value);
+      const rows = document.querySelectorAll("#admin-gps-tbody tr");
+      const newStations = [];
+      let hasError = false;
+
+      rows.forEach((tr) => {
+        const name = tr.querySelector(".st-name").value.trim();
+        const lat = parseFloat(tr.querySelector(".st-lat").value);
+        const lng = parseFloat(tr.querySelector(".st-lng").value);
+        const radius = parseInt(tr.querySelector(".st-rad").value);
+
+        if (!name || isNaN(lat) || isNaN(lng) || isNaN(radius)) {
+          hasError = true;
+          return;
+        }
+        newStations.push({ name, lat, lng, radius });
       });
+
+      if (hasError || newStations.length === 0) {
+        alert("請確認每一站的名稱、經緯度、圍欄數值都已正確填寫，不可留空。");
+        return;
+      }
+
+      task.stations = newStations;
 
       update(busRef, {
         currentTaskKey: selectedKey,
         taskDatabase: taskDatabase
       });
 
-      alert(`設定已成功寫入 Firebase 雲端！任務：${task.name}`);
+      alert(`設定已成功寫入 Firebase 雲端！任務：${task.name}，共 ${newStations.length} 站。`);
     });
 
     setInterval(() => {
