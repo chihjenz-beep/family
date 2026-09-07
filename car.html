@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="zh-TW"><head>
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -45,26 +47,54 @@
     .bottom-info { display: flex; justify-content: space-between; align-items: center; background-color: #222; color: #fff; padding: 6px 12px; border-radius: 4px; font-family: monospace; font-size: 1.1rem; margin-top: 10px; }
     .car-num span { font-weight: bold; color: #ffca28; }
 
-    /* Track Panel (優化橫向滾動與防防擠壓) */
-    .right-panel { width: 68%; background-color: #0b192c; position: relative; display: flex; flex-direction: column; justify-content: center; padding: 25px 20px; min-height: 200px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .track-container { position: relative; height: 100px; display: flex; align-items: center; min-width: 100%; }
-    .track-line { position: absolute; width: 100%; height: 8px; background-color: #555; z-index: 1; }
-    .track-progress { position: absolute; height: 8px; background-color: #f39c12; width: 0%; z-index: 2; transition: width 0.5s linear; }
+    /* Track Panel */
+    .right-panel { width: 68%; background-color: #0b192c; position: relative; display: flex; flex-direction: column; justify-content: center; padding: 25px 20px; min-height: 220px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .track-container { position: relative; height: 120px; display: flex; align-items: center; min-width: 100%; }
+    .track-line { position: absolute; width: 100%; height: 8px; background-color: #555; z-index: 1; top: 18px; }
+    .track-progress { position: absolute; height: 8px; background-color: #f39c12; width: 0%; z-index: 2; transition: width 0.5s linear; top: 18px; }
 
-    .arrows-wrapper { position: absolute; width: 100%; display: flex; justify-content: space-between; z-index: 2; padding: 0 1%; }
-    .segment-arrow { color: #2c3e50; font-size: 1.2rem; font-weight: 900; letter-spacing: -2px; transition: color 0.3s; line-height: 1; }
-    .segment-arrow.active { color: #00d2d3; text-shadow: 0 0 15px #00d2d3; animation: blinker 0.8s linear infinite; }
+    /* 箭頭動畫與容器設定 */
+    .arrows-wrapper { position: absolute; width: 100%; display: flex; justify-content: space-between; z-index: 2; padding: 0 20px; top: 12px; pointer-events: none; }
+    .segment-arrow { color: #34495e; font-size: 1rem; font-weight: 900; transition: color 0.3s; line-height: 1; letter-spacing: -1px; display: inline-block; }
+    .segment-arrow.active { 
+      color: #00d2d3; 
+      text-shadow: 0 0 10px #00d2d3; 
+      animation: arrowFlow 0.8s infinite linear; 
+    }
 
-    .stations-wrapper { position: absolute; width: 100%; display: flex; justify-content: space-between; z-index: 3; }
-    .station-node { display: flex; flex-direction: column; align-items: center; position: relative; flex-shrink: 0; min-width: 50px; }
-    .station-circle { width: 14px; height: 14px; background-color: #fff; border: 3px solid var(--accent-orange); border-radius: 50%; transition: all 0.3s; }
+    @keyframes arrowFlow {
+      0% { opacity: 0.2; transform: translateX(-4px); }
+      50% { opacity: 1; transform: translateX(2px); }
+      100% { opacity: 0.2; transform: translateX(6px); }
+    }
+
+    .stations-wrapper { position: absolute; width: 100%; display: flex; justify-content: space-between; z-index: 3; top: 12px; }
+    .station-node { display: flex; flex-direction: column; align-items: center; position: relative; flex-shrink: 0; min-width: 70px; max-width: 90px; }
+    .station-circle { width: 14px; height: 14px; background-color: #fff; border: 3px solid var(--accent-orange); border-radius: 50%; transition: all 0.3s; flex-shrink: 0; }
     .station-node.active .station-circle { background-color: #e74c3c; border-color: #fff; box-shadow: 0 0 10px #e74c3c; }
     .station-node.passed .station-circle { background-color: #7f8c8d; border-color: #4a5568; }
-    .station-name { margin-top: 6px; color: #fff; font-weight: bold; font-size: 0.7rem; white-space: nowrap; text-align: center; }
-    .station-code { font-size: 0.6rem; color: #aaa; }
+    
+    /* 站名換行與邊界控制 */
+    .station-name { 
+      margin-top: 8px; 
+      color: #fff; 
+      font-weight: bold; 
+      font-size: 0.75rem; 
+      white-space: normal; 
+      word-wrap: break-word; 
+      word-break: break-all; 
+      text-align: center; 
+      line-height: 1.25; 
+      max-width: 80px; 
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .station-code { font-size: 0.65rem; color: #aaa; margin-top: 3px; }
 
-    .train-icon { position: absolute; top: -22px; left: 0%; transform: translateX(-50%); font-size: 1.3rem; transition: left 0.5s linear; z-index: 4; }
-    .status-banner { position: relative; margin-top: 15px; text-align: center; background-color: rgba(255, 255, 255, 0.1); color: #f1c40f; padding: 5px; border-radius: 4px; font-size: 0.8rem; }
+    .train-icon { position: absolute; top: -10px; left: 0%; transform: translateX(-50%); font-size: 1.3rem; transition: left 0.5s linear; z-index: 4; }
+    .status-banner { position: relative; margin-top: 20px; text-align: center; background-color: rgba(255, 255, 255, 0.1); color: #f1c40f; padding: 6px; border-radius: 4px; font-size: 0.85rem; }
     .completed-banner { background-color: #27ae60 !important; color: #fff !important; font-weight: bold; }
 
     /* Admin Panel */
@@ -92,13 +122,13 @@
     @media (max-width: 768px) {
       .metro-display { flex-direction: column; }
       .left-panel { width: 100%; border-right: none; border-bottom: 3px solid #ccc; }
-      .right-panel { width: 100%; min-height: 180px; padding: 20px 15px; }
-      .station-name { font-size: 0.65rem; }
-      .segment-arrow { font-size: 0.9rem; letter-spacing: -3px; }
+      .right-panel { width: 100%; min-height: 200px; padding: 20px 15px; }
+      .station-name { font-size: 0.7rem; max-width: 70px; }
+      .segment-arrow { font-size: 0.85rem; }
     }
-
-    @keyframes blinker { 50% { opacity: 0.2; } }
-  </style></head><body>
+  </style>
+</head>
+<body>
 
   <div class="top-bar">
     <h2>平安家園公務車行車定位系統</h2>
@@ -162,8 +192,7 @@
 
     <div class="admin-title" style="margin-top:15px;">⚙️ 任務路線切換與電子圍欄設定</div>
     <label style="font-size:0.85rem; font-weight:bold; display:block; margin-bottom:5px;">選擇全車隊目前執行任務：</label>
-    <select id="admin-task-select" class="admin-select">
-    </select>
+    <select id="admin-task-select" class="admin-select"></select>
 
     <div class="table-responsive">
       <table class="gps-table">
@@ -177,8 +206,7 @@
             <th>操作</th>
           </tr>
         </thead>
-        <tbody id="admin-gps-tbody">
-        </tbody>
+        <tbody id="admin-gps-tbody"></tbody>
       </table>
     </div>
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
@@ -191,8 +219,7 @@
       <p style="font-size:0.75rem; color:#bbb; margin-bottom:8px; line-height:1.5;">
         到 Google 試算表選取「站名、緯度、經度、圍欄(公尺)」這四欄資料（不含標題列），直接複製後貼在下方，再按「解析並匯入」。也支援逗號分隔的 CSV 格式。
       </p>
-      <textarea id="import-textarea" rows="6" style="width:100%; background-color:#2a2a2a; color:#fff; border:1px solid #555; border-radius:4px; padding:8px; font-family:monospace; font-size:0.8rem;" placeholder="江山里	23.4500	120.2400	50
-振寮里	23.4530	120.2430	50"></textarea>
+      <textarea id="import-textarea" rows="6" style="width:100%; background-color:#2a2a2a; color:#fff; border:1px solid #555; border-radius:4px; padding:8px; font-family:monospace; font-size:0.8rem;" placeholder="江山里	23.4500	120.2400	50&#10;振寮里	23.4530	120.2430	50"></textarea>
       <div style="display:flex; gap:10px; margin-top:8px; flex-wrap:wrap;">
         <button id="btn-parse-import" class="duty-btn btn-start-duty" style="font-size:0.8rem;">✅ 解析並匯入（取代目前站點）</button>
         <button id="btn-parse-import-append" class="duty-btn" style="background-color:#16a085; color:#fff; font-size:0.8rem;">➕ 解析並附加到目前站點</button>
@@ -360,8 +387,6 @@
           
           watchPositionId = navigator.geolocation.watchPosition(
             (position) => {
-              // 防呆：若使用者已按下「停止廣播」，忽略稍後才送達的殘留定位更新，
-              // 避免把資料庫的 isDutyOn 又蓋回 true。
               if (!isDutyOn) return;
 
               const lat = position.coords.latitude;
@@ -433,8 +458,8 @@
       const stations = task.stations;
       const total = stations.length;
 
-      // 動態防擠壓邏輯：每站至少保留 70px 寬度，避免手機版重疊
-      const minStationWidth = 70;
+      /* 保留足夠單站寬度 (每站 90px)，站名長時可自動換行但不擠壓 */
+      const minStationWidth = 90;
       const calculatedWidth = total * minStationWidth;
       trackContainer.style.minWidth = calculatedWidth > 0 ? `${calculatedWidth}px` : "100%";
 
@@ -447,15 +472,16 @@
         const stNode = document.createElement("div");
         stNode.className = "station-node";
         stNode.id = `st-${idx}`;
-        stNode.innerHTML = `<div class="station-circle"></div><div class="station-name">${st.name}</div><div class="station-code">${String(idx+1).padStart(2,'0')}</div>`;
+        stNode.innerHTML = `<div class="station-circle"></div><div class="station-name" title="${st.name}">${st.name}</div><div class="station-code">${String(idx+1).padStart(2,'0')}</div>`;
         stationsContainer.appendChild(stNode);
       });
 
+      /* 建立站點之間的 >> 符號 */
       for (let i = 0; i < total - 1; i++) {
         const arrow = document.createElement("span");
         arrow.className = "segment-arrow";
         arrow.id = `arrow-${i}`;
-        arrow.innerHTML = ">";
+        arrow.innerHTML = "&gt;&gt;";
         arrowsContainer.appendChild(arrow);
       }
     }
@@ -514,6 +540,7 @@
         gpsDistText.textContent = `距離下一站: ${dist}m`;
       }
 
+      /* 箭頭動畫觸發邏輯 */
       for (let i = 0; i < total - 1; i++) {
         const arrowEl = document.getElementById(`arrow-${i}`);
         if (arrowEl) arrowEl.classList.toggle("active", !isArrivedState && i === currentStationIndex - 1);
@@ -563,7 +590,6 @@
       stations.forEach((st) => appendStationRow(st));
     }
 
-    // 建立單一站點列，st 為 {name, lat, lng, radius}；不傳則建立空白列供新增使用
     function appendStationRow(st) {
       const tbody = document.getElementById("admin-gps-tbody");
       const tr = document.createElement("tr");
@@ -609,8 +635,6 @@
       panel.style.display = panel.style.display === "block" ? "none" : "block";
     });
 
-    // 解析從試算表貼上的文字，支援 Tab（Google Sheets 複製）或逗號（CSV）分隔
-    // 每行格式：站名, 緯度, 經度, 圍欄(公尺)
     function parseStationText(text) {
       const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
       const stations = [];
@@ -631,7 +655,7 @@
         const radius = parseInt(radStr);
 
         if (isNaN(lat) || isNaN(lng)) {
-          if (i === 0) return; // 第一行若不是數字，視為標題列，靜默略過
+          if (i === 0) return;
           errors.push(`第 ${i + 1} 行緯度/經度不是數字，已略過：${line}`);
           return;
         }
@@ -723,4 +747,6 @@
       document.getElementById("current-time").textContent = 
         `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
     }, 1000);
-  </script></body></html>
+  </script>
+</body>
+</html>
