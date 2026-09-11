@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>空間總覽 · 家園維護記事</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<header class="page-head">
+  <h1>空間總覽</h1>
+  <p>樓層、區域與清潔項目一覽</p>
+</header>
+
+<main>
+  <div id="tree"></div>
+
+  <button id="seed-btn" class="secondary" style="margin-top:16px;">建立預設樓層/區域（第一次使用時按一次）</button>
+
+  <div class="section-label">新增自訂區域</div>
+  <form id="add-location-form" class="inline-form">
+    <select id="parent-select">
+      <option value="">— 建立為新樓層 —</option>
+    </select>
+    <input id="location-name" type="text" placeholder="區域名稱，例如：頂樓水塔" required />
+    <button type="submit" class="primary">新增區域</button>
+  </form>
+
+  <div class="section-label">新增自訂清潔項目</div>
+  <form id="add-item-form" class="inline-form">
+    <select id="item-location-select" required>
+      <option value="" disabled selected>選擇區域</option>
+    </select>
+    <input id="item-name" type="text" placeholder="項目名稱，例如：紗窗除塵" required />
+    <select id="item-cycle">
+      <option value="weekly">每週</option>
+      <option value="biweekly">每兩週</option>
+      <option value="monthly">每月</option>
+    </select>
+    <button type="submit" class="primary">新增項目</button>
+  </form>
+</main>
+
+<nav class="tabbar">
+  <a href="index.html"><span class="icon">✓</span>待辦</a>
+  <a href="upload.html"><span class="icon">＋</span>上傳</a>
+  <a href="locations.html" class="active"><span class="icon">▦</span>空間</a>
+  <a href="settings.html"><span class="icon">⚙</span>設定</a>
+</nav>
+
+<script type="module">
+  import { ready, db } from "./js/firebase-init.js";
+  import {
+    collection, getDocs, addDoc, query, orderBy, where,
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js";
+
+  const cycleLabel = { weekly: "每週", biweekly: "每兩週", monthly: "每月" };
+  const tree = document.getElementById("tree");
+  const parentSelect = document.getElementById("parent-select");
+  const itemLocationSelect = document.getElementById("item-location-select");
+
+  async function loadAll() {
+    const locSnap = await getDocs(query(collection(db, "locations"), orderBy("order")));
+    const locations = locSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const itemSnap = await getDocs(collection(db, "items"));
+    const items = itemSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+    const floors = locations.filter((l) => !l.parentId);
+    const children = locations.filter((l) => l.parentId);
+
+    tree.innerHTML = "";
+    parentSelect.innerHTML = '<option value="">— 建立為新樓層 —</option>';
+    itemLocationSelect.innerHTML = '<option value="" disabled selected>選擇區域</option>';
+
+    if (floors.length === 0) {
+      tree.innerHTML = `<div class="empty-state">還沒有任何樓層資料，可以按下方按鈕建立預設結構，或直接自訂新增。</div>`;
+    }
+
+    for (const floor of floors) {
+      const block = document.createElement("div");
+      block.className = "floor-block";
+      const floorChildren = children.filter((c) => c.parentId === floor.id);
+
+      block.innerHTML = `<div class="floor-title">${floor.name}</div>`;
+      for (const child of floorChildren) {
+        const childItems = items.filter((it) => it.locationId === child.id);
+        const row = document.createElement("div");
+        row.innerHTML = `
+          <div style="font-weight:600;font-size:13.5px;margin:8px 0 4px;color:var(--ink-soft);">└ ${child.name}</div>
+          ${
+            childItems.length
+              ? childItems
+                  .map(
+                    (it) => `<div class="item-row"><span>${it.name}</span><span class="cycle-tag">${cycleLabel[it.cycle] || it.cycle}</span></div>`
+                  )
+                  .join("")
+              : `<div style="font-size:12.5px;color:var(--ink-soft);padding-left:8px;">（尚無清潔項目）</div>`
+          }
+        `;
+        block.appendChild(row);
+        itemLocationSelect.innerHTML += `<option value="${child.id}">${floor.name} · ${child.name}</option>`;
+      }
+      tree.appendChild(block);
+      parentSelect.innerHTML += `<option value="${floor.id}">建立在「${floor.name}」之下</option>`;
+    }
+  }
+
+  document.getElementById("add-location-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const name = document.getElementById("location-name").value.trim();
+    const parentId = parentSelect.value || null;
+    if (!name) return;
+    await addDoc(collection(db, "locations"), { name, parentId, order: 999 });
+    document.getElementById("location-name").value = "";
+    loadAll();
+  });
+
+  document.getElementById("add-item-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const locationId = itemLocationSelect.value;
+    const name = document.getElementById("item-name").value.trim();
+    const cycle = document.getElementById("item-cycle").value;
+    if (!locationId || !name) return;
+    const functions = getFunctions();
+    const confirmSuggestion = httpsCallable(functions, "confirmSuggestion");
+    await confirmSuggestion({ locationId, itemName: name, cycle });
+    document.getElementById("item-name").value = "";
+    loadAll();
+  });
+
+  document.getElementById("seed-btn").addEventListener("click", async () => {
+    const functions = getFunctions();
+    const seed = httpsCallable(functions, "seedDefaultLocations");
+    const { data } = await seed();
+    alert(data.seeded ? "已建立預設樓層/區域" : data.message);
+    loadAll();
+  });
+
+  ready.then(loadAll);
+</script>
+</body>
+</html>

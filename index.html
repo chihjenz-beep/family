@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>清潔待辦 · 家園維護記事</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<header class="page-head">
+  <h1>清潔待辦</h1>
+  <p id="today-label"></p>
+</header>
+
+<main>
+  <div id="overdue-section" style="display:none;">
+    <div class="section-label">逾期</div>
+    <div id="overdue-list"></div>
+  </div>
+
+  <div id="pending-section" style="display:none;">
+    <div class="section-label">本週待辦</div>
+    <div id="pending-list"></div>
+  </div>
+
+  <div id="upcoming-section" style="display:none;">
+    <div class="section-label">即將到期</div>
+    <div id="upcoming-list"></div>
+  </div>
+
+  <div id="empty" class="empty-state" style="display:none;">
+    目前沒有待辦的清潔任務。<br />到「空間總覽」新增項目，或從「上傳照片」讓 AI 建議。
+  </div>
+</main>
+
+<nav class="tabbar">
+  <a href="index.html" class="active"><span class="icon">✓</span>待辦</a>
+  <a href="upload.html"><span class="icon">＋</span>上傳</a>
+  <a href="locations.html"><span class="icon">▦</span>空間</a>
+  <a href="settings.html"><span class="icon">⚙</span>設定</a>
+</nav>
+
+<script type="module">
+  import { ready, db } from "./js/firebase-init.js";
+  import {
+    collection, query, where, orderBy, onSnapshot, doc, getDoc,
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js";
+
+  document.getElementById("today-label").textContent = new Date().toLocaleDateString("zh-TW", {
+    year: "numeric", month: "long", day: "numeric", weekday: "short",
+  });
+
+  const functions = getFunctions();
+  const completeTaskFn = httpsCallable(functions, "completeTask");
+
+  const itemCache = new Map();
+  const locationCache = new Map();
+
+  async function getItem(itemId) {
+    if (itemCache.has(itemId)) return itemCache.get(itemId);
+    const snap = await getDoc(doc(db, "items", itemId));
+    const data = snap.exists() ? { id: snap.id, ...snap.data() } : null;
+    itemCache.set(itemId, data);
+    return data;
+  }
+
+  async function getLocationName(locationId) {
+    if (!locationId) return "";
+    if (locationCache.has(locationId)) return locationCache.get(locationId);
+    const snap = await getDoc(doc(db, "locations", locationId));
+    const name = snap.exists() ? snap.data().name : "";
+    locationCache.set(locationId, name);
+    return name;
+  }
+
+  const cycleLabel = { weekly: "每週", biweekly: "每兩週", monthly: "每月" };
+
+  function daysUntil(dueDate) {
+    const ms = dueDate - new Date();
+    return Math.ceil(ms / 86400000);
+  }
+
+  function taskCard(taskId, item, locationName, dueDate, isOverdue) {
+    const div = document.createElement("div");
+    div.className = "task-card " + (isOverdue ? "overdue" : "pending");
+    const d = daysUntil(dueDate);
+    const dueText = isOverdue
+      ? `逾期 ${Math.abs(d)} 天`
+      : d === 0 ? "今天到期" : `${d} 天後到期`;
+    div.innerHTML = `
+      <button class="task-check" aria-label="完成"></button>
+      <div class="task-info">
+        <div class="name">${locationName ? locationName + " · " : ""}${item?.name ?? "（未命名項目）"}</div>
+        <div class="meta">${cycleLabel[item?.cycle] ?? item?.cycle ?? ""} · ${dueText}</div>
+      </div>
+    `;
+    div.querySelector(".task-check").addEventListener("click", async () => {
+      div.style.opacity = "0.4";
+      try {
+        await completeTaskFn({ taskId });
+      } catch (e) {
+        alert("完成失敗：" + e.message);
+        div.style.opacity = "1";
+      }
+    });
+    return div;
+  }
+
+  async function render(tasks) {
+    const overdueList = document.getElementById("overdue-list");
+    const pendingList = document.getElementById("pending-list");
+    const upcomingList = document.getElementById("upcoming-list");
+    overdueList.innerHTML = "";
+    pendingList.innerHTML = "";
+    upcomingList.innerHTML = "";
+
+    let overdueCount = 0, pendingCount = 0, upcomingCount = 0;
+
+    for (const t of tasks) {
+      const item = await getItem(t.itemId);
+      const locationName = item ? await getLocationName(item.locationId) : "";
+      const dueDate = t.dueDate.toDate();
+      const isOverdue = t.status === "overdue" || dueDate < new Date();
+      const card = taskCard(t.id, item, locationName, dueDate, isOverdue);
+
+      if (isOverdue) {
+        overdueList.appendChild(card); overdueCount++;
+      } else if (daysUntil(dueDate) <= 7) {
+        pendingList.appendChild(card); pendingCount++;
+      } else {
+        upcomingList.appendChild(card); upcomingCount++;
+      }
+    }
+
+    document.getElementById("overdue-section").style.display = overdueCount ? "" : "none";
+    document.getElementById("pending-section").style.display = pendingCount ? "" : "none";
+    document.getElementById("upcoming-section").style.display = upcomingCount ? "" : "none";
+    document.getElementById("empty").style.display =
+      (overdueCount + pendingCount + upcomingCount === 0) ? "" : "none";
+  }
+
+  ready.then(() => {
+    const q = query(
+      collection(db, "cleaning_tasks"),
+      where("status", "in", ["pending", "overdue"]),
+      orderBy("dueDate", "asc")
+    );
+    onSnapshot(q, (snap) => {
+      const tasks = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      render(tasks);
+    }, (err) => {
+      console.error(err);
+      document.getElementById("empty").style.display = "";
+      document.getElementById("empty").textContent = "讀取任務失敗，請確認 Firebase 設定與 Firestore 索引是否已建立。";
+    });
+  });
+</script>
+</body>
+</html>

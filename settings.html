@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>設定 · 家園維護記事</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<header class="page-head">
+  <h1>設定</h1>
+  <p>管理清潔項目週期，查看完成紀錄</p>
+</header>
+
+<main>
+  <div class="section-label">所有清潔項目</div>
+  <div id="item-list"></div>
+
+  <div class="section-label">最近完成紀錄</div>
+  <div id="log-list"></div>
+</main>
+
+<nav class="tabbar">
+  <a href="index.html"><span class="icon">✓</span>待辦</a>
+  <a href="upload.html"><span class="icon">＋</span>上傳</a>
+  <a href="locations.html"><span class="icon">▦</span>空間</a>
+  <a href="settings.html" class="active"><span class="icon">⚙</span>設定</a>
+</nav>
+
+<script type="module">
+  import { ready, db } from "./js/firebase-init.js";
+  import {
+    collection, getDocs, doc, updateDoc, deleteDoc, query, where,
+    orderBy, limit, getDoc,
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const cycleLabel = { weekly: "每週", biweekly: "每兩週", monthly: "每月" };
+  const itemList = document.getElementById("item-list");
+  const logList = document.getElementById("log-list");
+
+  async function loadItems() {
+    const locSnap = await getDocs(collection(db, "locations"));
+    const locMap = new Map(locSnap.docs.map((d) => [d.id, d.data().name]));
+
+    const itemSnap = await getDocs(collection(db, "items"));
+    const items = itemSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+    if (!items.length) {
+      itemList.innerHTML = `<div class="empty-state">還沒有任何清潔項目，可以從「上傳照片」或「空間總覽」新增。</div>`;
+      return;
+    }
+
+    itemList.innerHTML = "";
+    items.forEach((it) => {
+      const row = document.createElement("div");
+      row.className = "item-row";
+      row.style.flexDirection = "column";
+      row.style.alignItems = "stretch";
+      row.style.gap = "6px";
+      row.innerHTML = `
+        <div style="display:flex;justify-content:space-between;">
+          <span style="font-weight:700;">${locMap.get(it.locationId) || "（未知區域）"} · ${it.name}</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select class="cycle-edit" style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--line);">
+            <option value="weekly" ${it.cycle === "weekly" ? "selected" : ""}>每週</option>
+            <option value="biweekly" ${it.cycle === "biweekly" ? "selected" : ""}>每兩週</option>
+            <option value="monthly" ${it.cycle === "monthly" ? "selected" : ""}>每月</option>
+          </select>
+          <button class="secondary delete-btn" style="padding:6px 12px;font-size:12.5px;">刪除</button>
+        </div>
+      `;
+
+      row.querySelector(".cycle-edit").addEventListener("change", async (e) => {
+        await updateDoc(doc(db, "items", it.id), { cycle: e.target.value });
+      });
+
+      row.querySelector(".delete-btn").addEventListener("click", async () => {
+        if (!confirm(`確定要刪除「${it.name}」嗎？相關待辦任務也會一併移除。`)) return;
+        const taskSnap = await getDocs(query(collection(db, "cleaning_tasks"), where("itemId", "==", it.id)));
+        await Promise.all(taskSnap.docs.map((d) => deleteDoc(d.ref)));
+        await deleteDoc(doc(db, "items", it.id));
+        row.remove();
+      });
+
+      itemList.appendChild(row);
+    });
+  }
+
+  async function loadLogs() {
+    const q = query(collection(db, "task_logs"), orderBy("completedAt", "desc"), limit(20));
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      logList.innerHTML = `<div class="empty-state">還沒有完成紀錄。</div>`;
+      return;
+    }
+    logList.innerHTML = "";
+    for (const d of snap.docs) {
+      const log = d.data();
+      let itemName = "（項目已刪除）";
+      try {
+        const itemSnap = await getDoc(doc(db, "items", log.itemId));
+        if (itemSnap.exists()) itemName = itemSnap.data().name;
+      } catch (e) {}
+      const row = document.createElement("div");
+      row.className = "item-row";
+      const dt = log.completedAt?.toDate?.();
+      row.innerHTML = `<span>${itemName}</span><span class="cycle-tag">${dt ? dt.toLocaleDateString("zh-TW") : ""}</span>`;
+      logList.appendChild(row);
+    }
+  }
+
+  ready.then(() => {
+    loadItems();
+    loadLogs();
+  });
+</script>
+</body>
+</html>
