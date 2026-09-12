@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>透天厝家務勾稽表</title>
+<style>
+  :root{
+    --paper:#F6F4EE;
+    --paper-raised:#FFFFFF;
+    --ink:#26241F;
+    --ink-soft:#635D50;
+    --indigo:#2F4858;
+    --indigo-deep:#1D2E38;
+    --moss:#5B7553;
+    --clay:#9C5A38;
+    --line:#DED6C3;
+    --line-soft:#EAE4D4;
+    --danger:#A0432B;
+    --radius:3px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+    line-height:1.6;
+  }
+  h1,h2,h3{
+    font-family:"Noto Serif TC","Songti TC","PMingLiU",serif;
+    font-weight:700;
+    margin:0;
+  }
+
+  /* ---- Header shaped like a building facade ---- */
+  header.building{
+    background:var(--indigo-deep);
+    color:#F1EEE4;
+    padding:28px 24px 20px;
+    position:relative;
+    overflow:hidden;
+  }
+  header.building::before{
+    content:"";
+    position:absolute;
+    right:-40px; top:-60px;
+    width:220px; height:220px;
+    background:radial-gradient(circle, rgba(255,255,255,0.06), transparent 70%);
+  }
+  .eyebrow{
+    font-size:13px;
+    color:#B9C6C2;
+    letter-spacing:0.02em;
+    margin-bottom:6px;
+  }
+  header.building h1{
+    font-size:26px;
+    letter-spacing:0.02em;
+  }
+  .subtitle{
+    margin-top:6px;
+    color:#C7CFC9;
+    font-size:14px;
+    max-width:520px;
+  }
+
+  /* ---- Elevator-panel floor selector ---- */
+  .elevator{
+    display:flex;
+    gap:0;
+    max-width:900px;
+    margin:0 auto;
+    padding:0 24px;
+    margin-top:-18px;
+    position:relative;
+    z-index:2;
+    flex-wrap:wrap;
+  }
+  .floor-btn{
+    flex:1 1 90px;
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-right:none;
+    padding:14px 8px 12px;
+    text-align:center;
+    cursor:pointer;
+    font-size:14px;
+    color:var(--ink-soft);
+    position:relative;
+    transition:background 0.15s ease, color 0.15s ease;
+  }
+  .floor-btn:first-child{border-top-left-radius:var(--radius);border-bottom-left-radius:var(--radius);}
+  .floor-btn:last-child{border-right:1px solid var(--line);border-top-right-radius:var(--radius);border-bottom-right-radius:var(--radius);}
+  .floor-btn .num{
+    display:block;
+    font-family:"Noto Serif TC",serif;
+    font-size:20px;
+    font-weight:700;
+    color:var(--ink);
+    margin-bottom:2px;
+  }
+  .floor-btn.active{
+    background:var(--moss);
+    color:#fff;
+  }
+  .floor-btn.active .num{color:#fff;}
+  .floor-btn:hover:not(.active){background:var(--line-soft);}
+
+  main{
+    max-width:900px;
+    margin:0 auto;
+    padding:32px 24px 80px;
+  }
+
+  .floor-heading{
+    display:flex;
+    align-items:baseline;
+    gap:12px;
+    margin-bottom:22px;
+    padding-bottom:12px;
+    border-bottom:1px solid var(--line);
+  }
+  .floor-heading h2{font-size:20px;}
+  .floor-heading .desc{color:var(--ink-soft);font-size:13px;}
+
+  .room-block{
+    margin-bottom:28px;
+  }
+  .room-title{
+    font-size:15px;
+    font-weight:700;
+    color:var(--indigo);
+    margin-bottom:8px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .room-title .del-room{
+    font-size:12px;
+    color:var(--ink-soft);
+    background:none;
+    border:none;
+    cursor:pointer;
+    text-decoration:underline;
+    padding:0;
+  }
+  .room-title .del-room:hover{color:var(--danger);}
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+  }
+  thead th{
+    text-align:left;
+    font-size:12px;
+    color:var(--ink-soft);
+    font-weight:500;
+    padding:9px 10px;
+    border-bottom:1px solid var(--line);
+    background:var(--line-soft);
+  }
+  tbody td{
+    padding:9px 10px;
+    border-bottom:1px solid var(--line-soft);
+    font-size:14px;
+    vertical-align:middle;
+  }
+  tbody tr:last-child td{border-bottom:none;}
+  th.col-check, td.col-check{width:40px;text-align:center;}
+  th.col-freq, td.col-freq{width:110px;}
+  th.col-date, td.col-date{width:150px;}
+  th.col-ops, td.col-ops{width:70px;}
+
+  input[type=checkbox]{
+    width:16px;height:16px;
+    accent-color:var(--moss);
+    cursor:pointer;
+  }
+  td.checked-item, td.checked-item + td{
+    color:#A19A88;
+  }
+  td.checked-item{text-decoration:line-through;}
+
+  .cell-input{
+    width:100%;
+    border:1px solid transparent;
+    background:transparent;
+    font-size:14px;
+    font-family:inherit;
+    color:inherit;
+    padding:3px 4px;
+    border-radius:2px;
+  }
+  .cell-input:hover{border-color:var(--line);}
+  .cell-input:focus{
+    border-color:var(--moss);
+    outline:none;
+    background:#fff;
+  }
+
+  .op-btn{
+    background:none;
+    border:none;
+    cursor:pointer;
+    font-size:12px;
+    color:var(--ink-soft);
+    padding:2px 4px;
+  }
+  .op-btn.delete:hover{color:var(--danger);}
+
+  .add-item-row{
+    padding:8px 10px;
+    border-top:1px dashed var(--line);
+  }
+  .add-item-btn{
+    background:none;
+    border:none;
+    color:var(--indigo);
+    font-size:13px;
+    cursor:pointer;
+    padding:4px 2px;
+  }
+  .add-item-btn:hover{text-decoration:underline;}
+
+  .add-room-btn{
+    display:inline-block;
+    margin-top:6px;
+    background:none;
+    border:1px dashed var(--line);
+    color:var(--ink-soft);
+    font-size:13px;
+    padding:8px 14px;
+    cursor:pointer;
+    border-radius:var(--radius);
+  }
+  .add-room-btn:hover{border-color:var(--moss);color:var(--moss);}
+
+  .date-input{
+    width:100%;
+    border:1px solid var(--line);
+    background:#fff;
+    font-size:13px;
+    font-family:inherit;
+    color:inherit;
+    padding:3px 4px;
+    border-radius:2px;
+  }
+  .date-input:focus{border-color:var(--moss);outline:none;}
+
+  .save-status{
+    max-width:900px;
+    margin:0 auto;
+    padding:0 24px;
+    display:flex;
+    justify-content:flex-end;
+  }
+  .save-status span{
+    font-size:12px;
+    color:var(--ink-soft);
+  }
+  .reset-btn{
+    background:none;
+    border:none;
+    color:var(--ink-soft);
+    font-size:12px;
+    text-decoration:underline;
+    cursor:pointer;
+    margin-left:12px;
+  }
+  .reset-btn:hover{color:var(--danger);}
+
+  footer.note{
+    max-width:900px;
+    margin:0 auto;
+    padding:0 24px 40px;
+    color:var(--ink-soft);
+    font-size:12px;
+  }
+
+  @media (max-width:520px){
+    .floor-btn{font-size:12px;padding:10px 4px;}
+    .floor-btn .num{font-size:16px;}
+    th.col-freq, td.col-freq{width:90px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="building">
+  <div class="eyebrow">四層透天厝　動靜分區規劃</div>
+  <h1>家務勾稽表</h1>
+  <div class="subtitle">依樓層與區域整理日常家務，可自行新增、修改或刪除項目與頻率。</div>
+</header>
+
+<nav class="elevator" id="elevator"></nav>
+
+<div class="save-status">
+  <span id="saveStatus"></span>
+  <button class="reset-btn" id="resetBtn">回復預設內容</button>
+</div>
+
+<main id="main"></main>
+
+<footer class="note">資料會自動儲存在瀏覽器本機（localStorage），同一台裝置、同一個瀏覽器下次開啟仍會保留。清除瀏覽器資料或換裝置/ 換瀏覽器則不會同步。</footer>
+
+<script>
+const STORAGE_KEY = "household-chores-data-v1";
+
+const DEFAULT_DATA = {
+  f1: {
+    label: "一樓", tag: "1F", desc: "公用與生活核心",
+    rooms: [
+      { name:"車庫 / 前庭", items:[
+        {task:"掃地、清潔地面油漬、鞋櫃整理", freq:"每週", done:false, date:""},
+        {task:"植栽澆水、修剪", freq:"每週2-3次", done:false, date:""},
+      ]},
+      { name:"客廳", items:[
+        {task:"吸塵 / 拖地", freq:"每週2-3次", done:false, date:""},
+        {task:"除塵（傢俱、電視、擺飾）", freq:"每週", done:false, date:""},
+        {task:"沙發抱枕整理、窗簾清潔", freq:"每月", done:false, date:""},
+      ]},
+      { name:"餐廳與廚房", items:[
+        {task:"餐桌擦拭", freq:"每日", done:false, date:""},
+        {task:"洗碗、廚具歸位", freq:"每日", done:false, date:""},
+        {task:"瓦斯爐 / 流理台深層清潔", freq:"每週", done:false, date:""},
+        {task:"冰箱整理、過期食品清查", freq:"每月", done:false, date:""},
+        {task:"抽油煙機清潔", freq:"每季", done:false, date:""},
+      ]},
+      { name:"孝親房 / 多功能室", items:[
+        {task:"環境整理、地板清潔", freq:"每週", done:false, date:""},
+      ]},
+      { name:"客用衛浴", items:[
+        {task:"馬桶、洗手台刷洗", freq:"每週2次", done:false, date:""},
+        {task:"補充衛生紙 / 洗手乳", freq:"視需求", done:false, date:""},
+      ]},
+      { name:"後院 / 工作陽台", items:[
+        {task:"落葉清掃、排水孔疏通", freq:"每週", done:false, date:""},
+        {task:"曬衣架、清潔用具整理", freq:"每週", done:false, date:""},
+      ]},
+    ]
+  },
+  f2: {
+    label:"二樓", tag:"2F", desc:"主臥與核心私人空間",
+    rooms:[
+      { name:"主臥室", items:[
+        {task:"床鋪整理、換洗床單", freq:"每日 / 每週", done:false, date:""},
+        {task:"地板清潔、除塵", freq:"每週2次", done:false, date:""},
+      ]},
+      { name:"衣帽間（WIC）", items:[
+        {task:"衣物歸位、季節換裝整理", freq:"每月", done:false, date:""},
+      ]},
+      { name:"主衛浴", items:[
+        {task:"浴缸清潔", freq:"每週", done:false, date:""},
+        {task:"馬桶、雙人洗手台刷洗", freq:"每週2次", done:false, date:""},
+        {task:"乾濕分離玻璃隔間刮水", freq:"每次使用後", done:false, date:""},
+      ]},
+      { name:"起居室 / 書房", items:[
+        {task:"書桌整理、書籍歸位", freq:"每週", done:false, date:""},
+      ]},
+      { name:"前陽台", items:[
+        {task:"地面清掃、盆栽照顧", freq:"每週", done:false, date:""},
+      ]},
+    ]
+  },
+  f3: {
+    label:"三樓", tag:"3F", desc:"次臥與次要生活區",
+    rooms:[
+      { name:"次臥室（2間）", items:[
+        {task:"床鋪整理、地板清潔", freq:"每週2次", done:false, date:""},
+        {task:"除塵、垃圾清運", freq:"每週", done:false, date:""},
+      ]},
+      { name:"共用衛浴", items:[
+        {task:"淋浴間清潔、防霉處理", freq:"每週", done:false, date:""},
+        {task:"馬桶、洗手台刷洗", freq:"每週2次", done:false, date:""},
+      ]},
+      { name:"陽台", items:[
+        {task:"排水孔清理、曬物收納", freq:"每週", done:false, date:""},
+      ]},
+    ]
+  },
+  f4: {
+    label:"四樓", tag:"4F", desc:"多功能與彈性空間",
+    rooms:[
+      { name:"神明廳 / 祖先牌位", items:[
+        {task:"香爐清理、供品更換", freq:"每日 / 初一十五", done:false, date:""},
+        {task:"神桌、環境除塵", freq:"每週", done:false, date:""},
+      ]},
+      { name:"多功能室 / 視聽室", items:[
+        {task:"設備除塵、地板清潔", freq:"每週", done:false, date:""},
+      ]},
+      { name:"洗衣房 / 曬衣間", items:[
+        {task:"洗衣機清潔（含濾網）", freq:"每月", done:false, date:""},
+        {task:"曬衣繩 / 架整理", freq:"每週", done:false, date:""},
+      ]},
+      { name:"大露台 / 頂樓花園", items:[
+        {task:"排水孔疏通、地面清掃", freq:"每週", done:false, date:""},
+        {task:"植栽澆水施肥、烤肉設備清潔", freq:"視需求", done:false, date:""},
+      ]},
+    ]
+  },
+  fall: {
+    label:"全棟", tag:"共用", desc:"跨樓層共用事項",
+    rooms:[
+      { name:"樓梯間", items:[
+        {task:"扶手、階梯清潔", freq:"每週", done:false, date:""},
+      ]},
+      { name:"門窗", items:[
+        {task:"紗窗紗門、玻璃清潔", freq:"每月", done:false, date:""},
+      ]},
+      { name:"垃圾 / 資源回收", items:[
+        {task:"分類、清運", freq:"每日 / 依清運日", done:false, date:""},
+      ]},
+    ]
+  }
+};
+
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      return JSON.parse(raw);
+    }
+  }catch(e){
+    console.warn("讀取本機儲存失敗，改用預設內容", e);
+  }
+  return JSON.parse(JSON.stringify(DEFAULT_DATA));
+}
+
+function saveData(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA));
+    const status = document.getElementById('saveStatus');
+    if(status){
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2,'0');
+      const mm = String(now.getMinutes()).padStart(2,'0');
+      status.textContent = `已自動儲存 ${hh}:${mm}`;
+    }
+  }catch(e){
+    console.warn("儲存失敗", e);
+  }
+}
+
+function todayStr(){
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+let DATA = loadData();
+let currentFloor = "f1";
+
+function renderElevator(){
+  const nav = document.getElementById('elevator');
+  nav.innerHTML = "";
+  Object.keys(DATA).forEach(key=>{
+    const f = DATA[key];
+    const btn = document.createElement('button');
+    btn.className = 'floor-btn' + (key===currentFloor ? ' active':'');
+    btn.innerHTML = `<span class="num">${f.tag}</span>${f.label}`;
+    btn.onclick = ()=>{ currentFloor = key; render(); };
+    nav.appendChild(btn);
+  });
+}
+
+function render(){
+  renderElevator();
+  const main = document.getElementById('main');
+  const floor = DATA[currentFloor];
+  main.innerHTML = "";
+
+  const heading = document.createElement('div');
+  heading.className = 'floor-heading';
+  heading.innerHTML = `<h2>${floor.label}</h2><span class="desc">${floor.desc}</span>`;
+  main.appendChild(heading);
+
+  floor.rooms.forEach((room, roomIdx)=>{
+    main.appendChild(renderRoom(floor, room, roomIdx));
+  });
+
+  const addRoomBtn = document.createElement('button');
+  addRoomBtn.className = 'add-room-btn';
+  addRoomBtn.textContent = '+ 新增區域';
+  addRoomBtn.onclick = ()=>{
+    const name = prompt('新區域名稱：');
+    if(name && name.trim()){
+      floor.rooms.push({name:name.trim(), items:[]});
+      saveData();
+      render();
+    }
+  };
+  main.appendChild(addRoomBtn);
+}
+
+function renderRoom(floor, room, roomIdx){
+  const block = document.createElement('div');
+  block.className = 'room-block';
+
+  const title = document.createElement('div');
+  title.className = 'room-title';
+  title.innerHTML = `<span>${room.name}</span>`;
+  const delRoomBtn = document.createElement('button');
+  delRoomBtn.className = 'del-room';
+  delRoomBtn.textContent = '刪除此區域';
+  delRoomBtn.onclick = ()=>{
+    if(confirm(`確定要刪除「${room.name}」這個區域及所有項目嗎？`)){
+      floor.rooms.splice(roomIdx,1);
+      saveData();
+      render();
+    }
+  };
+  title.appendChild(delRoomBtn);
+  block.appendChild(title);
+
+  const table = document.createElement('table');
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th class="col-check"></th>
+        <th>家務項目</th>
+        <th class="col-freq">頻率</th>
+        <th class="col-date">完成日期</th>
+        <th class="col-ops">操作</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  `;
+  const tbody = table.querySelector('tbody');
+
+  room.items.forEach((item, itemIdx)=>{
+    const tr = document.createElement('tr');
+
+    const tdCheck = document.createElement('td');
+    tdCheck.className = 'col-check';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = item.done;
+    cb.onchange = ()=>{
+      item.done = cb.checked;
+      if(item.done && !item.date){ item.date = todayStr(); }
+      saveData();
+      render();
+    };
+    tdCheck.appendChild(cb);
+    tr.appendChild(tdCheck);
+
+    const tdTask = document.createElement('td');
+    if(item.done) tdTask.className = 'checked-item';
+    const taskInput = document.createElement('input');
+    taskInput.className = 'cell-input';
+    taskInput.value = item.task;
+    taskInput.onchange = ()=>{ item.task = taskInput.value; saveData(); };
+    tdTask.appendChild(taskInput);
+    tr.appendChild(tdTask);
+
+    const tdFreq = document.createElement('td');
+    tdFreq.className = 'col-freq';
+    if(item.done) tdFreq.classList.add('checked-item');
+    const freqInput = document.createElement('input');
+    freqInput.className = 'cell-input';
+    freqInput.value = item.freq;
+    freqInput.onchange = ()=>{ item.freq = freqInput.value; saveData(); };
+    tdFreq.appendChild(freqInput);
+    tr.appendChild(tdFreq);
+
+    const tdDate = document.createElement('td');
+    tdDate.className = 'col-date';
+    const dateInput = document.createElement('input');
+    dateInput.type = 'date';
+    dateInput.className = 'date-input';
+    dateInput.value = item.date || "";
+    dateInput.onchange = ()=>{ item.date = dateInput.value; saveData(); };
+    tdDate.appendChild(dateInput);
+    tr.appendChild(tdDate);
+
+    const tdOps = document.createElement('td');
+    tdOps.className = 'col-ops';
+    const delBtn = document.createElement('button');
+    delBtn.className = 'op-btn delete';
+    delBtn.textContent = '刪除';
+    delBtn.onclick = ()=>{
+      room.items.splice(itemIdx,1);
+      saveData();
+      render();
+    };
+    tdOps.appendChild(delBtn);
+    tr.appendChild(tdOps);
+
+    tbody.appendChild(tr);
+  });
+
+  block.appendChild(table);
+
+  const addRow = document.createElement('div');
+  addRow.className = 'add-item-row';
+  const addBtn = document.createElement('button');
+  addBtn.className = 'add-item-btn';
+  addBtn.textContent = '+ 新增項目';
+  addBtn.onclick = ()=>{
+    room.items.push({task:'新項目', freq:'每週', done:false, date:""});
+    saveData();
+    render();
+  };
+  addRow.appendChild(addBtn);
+  block.appendChild(addRow);
+
+  return block;
+}
+
+document.getElementById('resetBtn').onclick = ()=>{
+  if(confirm('確定要清除目前所有紀錄，回復成預設的家務清單嗎？這個動作無法復原。')){
+    DATA = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    saveData();
+    render();
+  }
+};
+
+render();
+</script>
+
+</body>
+</html>
