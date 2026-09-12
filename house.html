@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>透天厝家務勾稽表</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
   :root{
     --paper:#F6F4EE;
@@ -304,9 +306,27 @@
 
 <main id="main"></main>
 
-<footer class="note">資料會自動儲存在瀏覽器本機（localStorage），同一台裝置、同一個瀏覽器下次開啟仍會保留。清除瀏覽器資料或換裝置/ 換瀏覽器則不會同步。</footer>
+<footer class="note">若已設定雲端同步（見 README.md），所有人開啟這個網址看到、修改的都是同一份共用資料；若未設定，資料只會存在目前這台裝置的瀏覽器裡。</footer>
 
 <script>
+// ------------------------------------------------------------------
+// 雲端同步設定：若要開啟「全家/志工共用一份、免登入」的雲端同步，
+// 到 Firebase 建立一個免費專案、啟用 Realtime Database，
+// 把專案的設定值貼在下面（詳細步驟見 README.md）。
+// 全部留空（維持 ""）就會只用瀏覽器本機儲存，不會雲端同步。
+// ------------------------------------------------------------------
+const FIREBASE_CONFIG = {
+  apiKey: "",
+  authDomain: "",
+  databaseURL: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: ""
+};
+const SYNC_ENABLED = !!FIREBASE_CONFIG.databaseURL;
+const SYNC_PATH = "household-chores/shared";
+
 const STORAGE_KEY = "household-chores-data-v1";
 
 const DEFAULT_DATA = {
@@ -417,7 +437,7 @@ const DEFAULT_DATA = {
   }
 };
 
-function loadData(){
+function loadLocalData(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
     if(raw){
@@ -429,19 +449,16 @@ function loadData(){
   return JSON.parse(JSON.stringify(DEFAULT_DATA));
 }
 
-function saveData(){
-  try{
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA));
-    const status = document.getElementById('saveStatus');
-    if(status){
-      const now = new Date();
-      const hh = String(now.getHours()).padStart(2,'0');
-      const mm = String(now.getMinutes()).padStart(2,'0');
-      status.textContent = `已自動儲存 ${hh}:${mm}`;
-    }
-  }catch(e){
-    console.warn("儲存失敗", e);
-  }
+function nowHHMM(){
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  return `${hh}:${mm}`;
+}
+
+function updateSyncStatus(text){
+  const status = document.getElementById('saveStatus');
+  if(status) status.textContent = text;
 }
 
 function todayStr(){
@@ -452,8 +469,49 @@ function todayStr(){
   return `${y}-${m}-${day}`;
 }
 
-let DATA = loadData();
+let DATA = loadLocalData();
 let currentFloor = "f1";
+let fbRef = null;
+
+function initSync(){
+  if(!SYNC_ENABLED){
+    updateSyncStatus('僅本機儲存（尚未設定雲端同步，見 README.md）');
+    return;
+  }
+  try{
+    firebase.initializeApp(FIREBASE_CONFIG);
+    fbRef = firebase.database().ref(SYNC_PATH);
+    fbRef.on('value', snapshot=>{
+      const remote = snapshot.val();
+      if(remote){
+        DATA = remote;
+        try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA)); }catch(e){}
+        render();
+        updateSyncStatus('雲端同步中・' + nowHHMM());
+      }else{
+        // 雲端還沒有資料，把目前的內容上傳當作初始值
+        fbRef.set(DATA);
+      }
+    }, err=>{
+      console.warn("雲端同步失敗，改用本機儲存", err);
+      updateSyncStatus('雲端同步失敗，暫時改用本機儲存');
+    });
+  }catch(e){
+    console.warn("Firebase 設定有誤", e);
+    updateSyncStatus('雲端設定有誤，暫時改用本機儲存');
+  }
+}
+
+function saveData(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA)); }catch(e){ console.warn("本機儲存失敗", e); }
+  if(SYNC_ENABLED && fbRef){
+    fbRef.set(DATA)
+      .then(()=> updateSyncStatus('雲端同步中・' + nowHHMM()))
+      .catch(()=> updateSyncStatus('雲端同步失敗，已存在本機'));
+  }else{
+    updateSyncStatus('已儲存在本機・' + nowHHMM());
+  }
+}
 
 function renderElevator(){
   const nav = document.getElementById('elevator');
@@ -613,7 +671,7 @@ function renderRoom(floor, room, roomIdx){
 }
 
 document.getElementById('resetBtn').onclick = ()=>{
-  if(confirm('確定要清除目前所有紀錄，回復成預設的家務清單嗎？這個動作無法復原。')){
+  if(confirm('確定要清除目前所有紀錄，回復成預設的家務清單嗎？這個動作無法復原。' + (SYNC_ENABLED ? '（會同時覆蓋雲端上的共用資料）':''))){
     DATA = JSON.parse(JSON.stringify(DEFAULT_DATA));
     saveData();
     render();
@@ -621,6 +679,7 @@ document.getElementById('resetBtn').onclick = ()=>{
 };
 
 render();
+initSync();
 </script>
 
 </body>
