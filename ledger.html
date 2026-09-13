@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>個人收支明細帳</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#FAF6EC;
+    --bg-alt:#F3EEDF;
+    --paper:#FFFDF7;
+    --ink:#2A1F1A;
+    --muted:#8B8072;
+    --border:#E5DDC8;
+    --maroon:#7A2233;
+    --maroon-dark:#5B1A24;
+    --sidebar:#231712;
+    --sidebar-ink:#EFE6D8;
+    --gold:#C9A24B;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Microsoft JhengHei",sans-serif;}
+  h1,h2,h3,.serif,.big-number{font-family:"Noto Serif TC","Georgia",serif;}
+  .app{display:flex;min-height:100vh;}
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{width:250px;flex-shrink:0;background:var(--sidebar);color:var(--sidebar-ink);
+    padding:28px 22px;display:flex;flex-direction:column;}
+  .sidebar .logo-box{width:38px;height:38px;background:var(--maroon);border-radius:4px;margin-bottom:18px;}
+  .sidebar .pwa-tag{font-size:11px;letter-spacing:.08em;color:var(--gold);margin-bottom:2px;}
+  .sidebar h1{font-size:22px;line-height:1.3;margin:6px 0 14px;font-weight:600;}
+  .sidebar .tagline{font-size:12.5px;color:#B9AC96;line-height:1.6;margin-bottom:26px;
+    border-bottom:1px solid rgba(255,255,255,.12);padding-bottom:22px;}
+  nav.sidenav{display:flex;flex-direction:column;gap:2px;}
+  nav.sidenav button{display:flex;align-items:center;gap:11px;background:none;border:none;
+    color:#D8CDBB;font-size:14.5px;padding:11px 10px;border-radius:6px;cursor:pointer;text-align:left;
+    font-family:inherit;}
+  nav.sidenav button svg{width:17px;height:17px;flex-shrink:0;opacity:.85;}
+  nav.sidenav button:hover{background:rgba(255,255,255,.06);}
+  nav.sidenav button.active{background:var(--maroon);color:#fff;}
+  .sync-note{margin-top:auto;padding-top:18px;font-size:11px;color:#7C7264;line-height:1.6;}
+  .sync-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#6FBF73;margin-right:5px;}
+
+  /* ---------- Main ---------- */
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;}
+  .topbar{display:flex;justify-content:space-between;align-items:center;
+    padding:22px 36px;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:5;}
+  .topbar .crumb{font-size:12px;letter-spacing:.1em;color:var(--muted);}
+  .btn{border:1px solid var(--border);background:var(--paper);color:var(--ink);
+    padding:9px 16px;border-radius:6px;font-size:13.5px;cursor:pointer;display:inline-flex;
+    align-items:center;gap:6px;font-family:inherit;}
+  .btn-primary{background:var(--maroon);border-color:var(--maroon);color:#fff;}
+  .btn-primary:hover{background:var(--maroon-dark);}
+  .btn:hover{background:var(--bg-alt);}
+  .topbar-actions{display:flex;gap:10px;}
+
+  .content{padding:32px 36px 60px;max-width:1100px;width:100%;}
+  .view{display:none;}
+  .view.active{display:block;}
+
+  /* ---------- Dashboard hero ---------- */
+  .hero{display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap;margin-bottom:30px;}
+  .hero-text{flex:1;min-width:260px;}
+  .hero .month-num{font-size:64px;line-height:1;font-weight:600;color:var(--ink);}
+  .hero .month-label{font-size:34px;font-weight:600;margin:2px 0 14px;}
+  .hero p{color:var(--muted);font-size:14.5px;line-height:1.7;max-width:480px;}
+
+  .stat-grid{display:grid;grid-template-columns:repeat(2,1fr);border:1px solid var(--border);
+    border-radius:8px;overflow:hidden;min-width:320px;background:var(--paper);}
+  .stat-cell{padding:18px 22px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);}
+  .stat-cell:nth-child(2n){border-right:none;}
+  .stat-cell:nth-child(n+3){border-bottom:none;}
+  .stat-cell .label{font-size:12.5px;color:var(--muted);margin-bottom:6px;}
+  .stat-cell .value{font-size:24px;font-weight:600;}
+  .value.neg{color:var(--maroon);}
+
+  .month-switch{display:flex;align-items:center;gap:12px;margin:26px 0;}
+  .month-switch button.arrow{width:38px;height:38px;border-radius:6px;border:1px solid var(--border);
+    background:var(--paper);cursor:pointer;font-size:15px;}
+  .month-switch .month-box{flex:1;max-width:220px;text-align:center;padding:10px;border:1px solid var(--border);
+    border-radius:6px;background:var(--paper);font-weight:600;}
+  .month-switch .cta{margin-left:auto;}
+
+  .recent-list{border-top:1px solid var(--border);}
+  .tx-row{display:flex;align-items:center;gap:14px;padding:14px 4px;border-bottom:1px solid var(--border);}
+  .tx-badge{width:34px;height:34px;border-radius:6px;background:var(--maroon);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+  .tx-badge.income{background:#3E6B4F;}
+  .tx-main{flex:1;min-width:0;}
+  .tx-main .cat{font-weight:600;font-size:14.5px;}
+  .tx-main .meta{font-size:12.5px;color:var(--muted);}
+  .tx-amount{font-weight:600;font-size:15px;}
+  .tx-amount.neg{color:var(--maroon);}
+  .tx-amount.pos{color:#3E6B4F;}
+  .tx-actions{display:flex;gap:6px;margin-left:10px;}
+  .icon-btn{border:none;background:none;cursor:pointer;color:var(--muted);font-size:13px;padding:4px 6px;}
+  .icon-btn:hover{color:var(--ink);}
+
+  /* ---------- cards / sections ---------- */
+  .card{background:var(--paper);border:1px solid var(--border);border-radius:8px;padding:24px;margin-bottom:22px;}
+  .section-title{font-size:13px;letter-spacing:.06em;color:var(--muted);margin-bottom:14px;}
+  .three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:22px;}
+  .breakdown-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:14px;}
+  .swatch{width:11px;height:11px;border-radius:2px;flex-shrink:0;}
+  .breakdown-row .name{flex:1;}
+  .breakdown-row .pct{font-weight:600;width:48px;text-align:right;}
+  canvas{max-width:100%;}
+
+  /* ---------- filters / table ---------- */
+  .filter-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px;}
+  .field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;}
+  .field input,.field select{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:6px;
+    font-size:13.5px;background:var(--paper);font-family:inherit;color:var(--ink);}
+  table{width:100%;border-collapse:collapse;font-size:14px;}
+  table th{text-align:left;font-size:12px;color:var(--muted);font-weight:600;padding:8px 6px;
+    border-bottom:1px solid var(--border);}
+  table td{padding:11px 6px;border-bottom:1px solid var(--border);}
+  table tr:last-child td{border-bottom:none;}
+  .empty-state{text-align:center;padding:50px 20px;color:var(--muted);font-size:14px;}
+
+  /* ---------- categories ---------- */
+  .cat-panels{display:grid;grid-template-columns:1fr 1fr;gap:22px;}
+  .cat-panel-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;
+    color:#fff;font-weight:600;border-radius:8px 8px 0 0;}
+  .cat-panel-head.income{background:var(--sidebar);}
+  .cat-panel-head.expense{background:var(--maroon);}
+  .cat-panel-body{border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;background:var(--paper);}
+  .cat-row{display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--border);}
+  .cat-row:last-child{border-bottom:none;}
+  .cat-row .name{flex:1;font-size:14px;font-weight:500;}
+  .cat-row .count{font-size:12.5px;color:var(--muted);margin-right:8px;}
+
+  /* ---------- report ---------- */
+  .report-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;}
+  .report-head .sub{font-size:12px;color:var(--muted);margin-top:4px;}
+  .report-totals{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--border);
+    border-radius:8px;overflow:hidden;margin-bottom:26px;}
+  .report-totals div{padding:18px 20px;border-right:1px solid var(--border);}
+  .report-totals div:last-child{border-right:none;}
+  .report-totals .label{font-size:12px;color:var(--muted);margin-bottom:6px;}
+  .report-totals .value{font-size:22px;font-weight:600;}
+
+  /* ---------- modal ---------- */
+  .modal-overlay{position:fixed;inset:0;background:rgba(35,23,18,.45);display:none;
+    align-items:center;justify-content:center;z-index:50;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--paper);border-radius:10px;padding:28px;width:420px;max-width:92vw;
+    box-shadow:0 20px 50px rgba(0,0,0,.25);}
+  .modal h3{margin:0 0 18px;font-size:18px;}
+  .modal .field{margin-bottom:14px;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;}
+  .type-toggle{display:flex;gap:8px;}
+  .type-toggle button{flex:1;padding:9px;border:1px solid var(--border);background:var(--paper);
+    border-radius:6px;cursor:pointer;font-family:inherit;font-size:13.5px;}
+  .type-toggle button.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+
+  @media (max-width:860px){
+    .app{flex-direction:column;}
+    .sidebar{width:100%;flex-direction:row;flex-wrap:wrap;align-items:center;padding:16px 20px;}
+    .sidebar .tagline,.sync-note{display:none;}
+    nav.sidenav{flex-direction:row;flex-wrap:wrap;}
+    .content{padding:22px 18px 60px;}
+    .filter-grid,.three-col,.cat-panels,.report-totals{grid-template-columns:1fr;}
+    .hero{flex-direction:column;}
+  }
+
+  @media print{
+    .sidebar,.topbar,.month-switch .cta{display:none !important;}
+    .content{padding:0;max-width:100%;}
+    body{background:#fff;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo-box"></div>
+    <div class="pwa-tag">SYNCED · MULTI-DEVICE</div>
+    <h1>個人收支<br>明細帳</h1>
+    <div class="tagline">資料存在你的 Firebase 專案裡，PC 與手機開啟同一個網址即可共用同一份帳本。</div>
+    <nav class="sidenav" id="sidenav">
+      <button data-view="dashboard" class="active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16M4 12h16M4 19h10"/></svg>
+        本月帳冊
+      </button>
+      <button data-view="overview">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg>
+        月度總覽
+      </button>
+      <button data-view="summary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>
+        帳務彙總
+      </button>
+      <button data-view="details">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        收支明細
+      </button>
+      <button data-view="categories">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 10 12 3 4 10v10h6v-6h4v6h6z"/></svg>
+        分類管理
+      </button>
+      <button data-view="report">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h6M9 16h6"/></svg>
+        月度報表
+      </button>
+    </nav>
+    <div class="sync-note" id="sync-note"><span class="sync-dot"></span>連線中…</div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="crumb">LOCAL · FIREBASE · SYNCED</div>
+      <div class="topbar-actions">
+        <button class="btn btn-primary" id="btn-add-tx">＋ 新增明細</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- 本月帳冊 -->
+      <section class="view active" id="view-dashboard">
+        <div class="hero">
+          <div class="hero-text">
+            <div class="month-num serif" id="dash-month-num">09</div>
+            <div class="month-label serif" id="dash-month-label">月帳冊</div>
+            <p id="dash-desc">這個月的每一筆收入與支出，收錄於此。讓日常流動，成為可回望的財務篇章。</p>
+          </div>
+          <div class="stat-grid">
+            <div class="stat-cell"><div class="label">本月結餘</div><div class="value" id="dash-balance">$0</div></div>
+            <div class="stat-cell"><div class="label">收錄明細</div><div class="value" id="dash-count">0 筆</div></div>
+            <div class="stat-cell"><div class="label">本月收入</div><div class="value" id="dash-income">$0</div></div>
+            <div class="stat-cell"><div class="label">本月支出</div><div class="value" id="dash-expense">$0</div></div>
+          </div>
+        </div>
+
+        <div class="month-switch">
+          <button class="arrow" id="dash-prev">‹</button>
+          <div class="month-box" id="dash-month-box">2026年09月</div>
+          <button class="arrow" id="dash-next">›</button>
+          <button class="btn cta" data-view="details">翻開本月帳目</button>
+        </div>
+
+        <div class="section-title">最近明細</div>
+        <div class="recent-list" id="dash-recent"></div>
+      </section>
+
+      <!-- 月度總覽 -->
+      <section class="view" id="view-overview">
+        <h2>月度總覽</h2>
+        <div class="three-col">
+          <div class="card"><div class="section-title">本月收入</div><div class="value" id="ov-income" style="font-size:22px;font-weight:600;">$0</div></div>
+          <div class="card"><div class="section-title">本月支出</div><div class="value" id="ov-expense" style="font-size:22px;font-weight:600;">$0</div></div>
+          <div class="card"><div class="section-title">本月結餘</div><div class="value" id="ov-balance" style="font-size:22px;font-weight:600;">$0</div></div>
+        </div>
+        <div class="card">
+          <div class="section-title">近六個月趨勢</div>
+          <canvas id="chart-trend" height="90"></canvas>
+        </div>
+        <div class="card">
+          <div class="section-title">本月支出分類佔比</div>
+          <div id="ov-breakdown"></div>
+        </div>
+      </section>
+
+      <!-- 帳務彙總 -->
+      <section class="view" id="view-summary">
+        <h2>帳務彙總</h2>
+        <div class="card">
+          <div class="section-title">分類金額對照（本月）</div>
+          <canvas id="chart-summary" height="110"></canvas>
+        </div>
+      </section>
+
+      <!-- 收支明細 -->
+      <section class="view" id="view-details">
+        <h2>每一筆，都有去向。</h2>
+        <div class="card">
+          <div class="filter-grid">
+            <div class="field"><label>月份</label><input type="month" id="f-month"></div>
+            <div class="field"><label>收支類型</label>
+              <select id="f-type"><option value="all">全部類型</option><option value="income">收入</option><option value="expense">支出</option></select>
+            </div>
+            <div class="field"><label>分類</label><select id="f-category"><option value="all">全部分類</option></select></div>
+            <div class="field"><label>關鍵字</label><input type="text" id="f-keyword" placeholder="分類或備註"></div>
+          </div>
+        </div>
+        <div class="card" style="padding:0;">
+          <table>
+            <thead><tr><th>日期</th><th>類型</th><th>分類</th><th>備註</th><th style="text-align:right;">金額</th><th></th></tr></thead>
+            <tbody id="details-body"></tbody>
+          </table>
+          <div class="empty-state" id="details-empty" style="display:none;">找不到符合條件的明細</div>
+        </div>
+      </section>
+
+      <!-- 分類管理 -->
+      <section class="view" id="view-categories">
+        <h2>分類管理</h2>
+        <div style="text-align:right;margin-bottom:16px;">
+          <button class="btn" id="btn-add-cat">＋ 新增分類</button>
+        </div>
+        <div class="cat-panels">
+          <div>
+            <div class="cat-panel-head income">收入分類 <span id="cat-income-count">0</span></div>
+            <div class="cat-panel-body" id="cat-income-list"></div>
+          </div>
+          <div>
+            <div class="cat-panel-head expense">支出分類 <span id="cat-expense-count">0</span></div>
+            <div class="cat-panel-body" id="cat-expense-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 月度報表 -->
+      <section class="view" id="view-report">
+        <div style="text-align:right;margin-bottom:16px;">
+          <button class="btn btn-primary" onclick="window.print()">列印 / 匯出 PDF</button>
+        </div>
+        <div class="card">
+          <div class="report-head">
+            <div>
+              <div class="section-title">個人收支明細帳</div>
+              <h2 id="rep-title" style="margin:4px 0;">2026年09月 · 月度收支報表</h2>
+              <div class="sub" id="rep-meta">產生時間：－</div>
+            </div>
+          </div>
+          <div class="report-totals">
+            <div><div class="label">本月收入</div><div class="value" id="rep-income">$0</div></div>
+            <div><div class="label">本月支出</div><div class="value" id="rep-expense">$0</div></div>
+            <div><div class="label">本月結餘</div><div class="value" id="rep-balance">$0</div></div>
+          </div>
+          <div class="section-title">支出分類 EXPENSE BREAKDOWN</div>
+          <table>
+            <thead><tr><th>分類</th><th>金額</th><th style="text-align:right;">占比</th></tr></thead>
+            <tbody id="rep-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<!-- 新增/編輯明細 Modal -->
+<div class="modal-overlay" id="modal-tx">
+  <div class="modal">
+    <h3 id="tx-modal-title">新增明細</h3>
+    <div class="type-toggle" id="tx-type-toggle">
+      <button type="button" data-type="expense" class="active">支出</button>
+      <button type="button" data-type="income">收入</button>
+    </div>
+    <div class="field" style="margin-top:14px;"><label>日期</label><input type="date" id="tx-date"></div>
+    <div class="field"><label>分類</label><select id="tx-category"></select></div>
+    <div class="field"><label>備註</label><input type="text" id="tx-note" placeholder="例如：早餐"></div>
+    <div class="field"><label>金額</label><input type="number" id="tx-amount" min="0" step="1" placeholder="0"></div>
+    <div class="modal-actions">
+      <button class="btn" id="tx-cancel">取消</button>
+      <button class="btn btn-primary" id="tx-save">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 新增/編輯分類 Modal -->
+<div class="modal-overlay" id="modal-cat">
+  <div class="modal">
+    <h3 id="cat-modal-title">新增分類</h3>
+    <div class="type-toggle" id="cat-type-toggle">
+      <button type="button" data-type="expense" class="active">支出分類</button>
+      <button type="button" data-type="income">收入分類</button>
+    </div>
+    <div class="field" style="margin-top:14px;"><label>名稱</label><input type="text" id="cat-name" placeholder="例如：餐飲"></div>
+    <div class="field"><label>顏色標記</label><input type="color" id="cat-color" value="#7A2233"></div>
+    <div class="modal-actions">
+      <button class="btn" id="cat-cancel">取消</button>
+      <button class="btn btn-primary" id="cat-save">儲存</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getAuth, signInAnonymously, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import {
+  getFirestore, collection, addDoc, updateDoc, deleteDoc, doc,
+  onSnapshot, query, orderBy, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+// ------- 你的 Firebase 設定（沿用 housekeeping 專案） -------
+const firebaseConfig = {
+  apiKey: "AIzaSyCNEsvoZABXNFNnLMBEJ8RGRP50XznJ5Qw",
+  authDomain: "housekeeping-3bb3e.firebaseapp.com",
+  databaseURL: "https://housekeeping-3bb3e-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "housekeeping-3bb3e",
+  storageBucket: "housekeeping-3bb3e.firebasestorage.app",
+  messagingSenderId: "431448102839",
+  appId: "1:431448102839:web:f79df318e921a32ac4ba32"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let uid = null;
+// 固定帳本路徑：只有你自己使用，所有裝置直接共用這個值，不需手動輸入代碼
+const LEDGER_CODE = "chihjen-personal-ledger";
+let transactions = [];
+let categories = [];
+let categoriesSeeded = false;
+let currentMonth = todayMonthKey();
+let currentView = "dashboard";
+let filters = { type: "all", category: "all", keyword: "", month: "" };
+let editingTxId = null;
+let editingCatId = null;
+let txType = "expense";
+let catType = "expense";
+let trendChart = null;
+let summaryChart = null;
+
+const DEFAULT_CATEGORIES = [
+  { name: "薪資", type: "income", color: "#7A2233" },
+  { name: "投資收益", type: "income", color: "#8B8072" },
+  { name: "其他收入", type: "income", color: "#B9AC96" },
+  { name: "餐飲", type: "expense", color: "#C0392B" },
+  { name: "交通", type: "expense", color: "#4A4038" },
+  { name: "日常用品", type: "expense", color: "#6B7B6E" },
+  { name: "居住", type: "expense", color: "#231712" },
+  { name: "健康", type: "expense", color: "#7A5C3E" },
+  { name: "休閒", type: "expense", color: "#9B8557" },
+  { name: "其他支出", type: "expense", color: "#B9AC96" }
+];
+
+// ---------------- Auth ----------------
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    uid = user.uid;
+    document.getElementById("sync-note").innerHTML = '<span class="sync-dot"></span>已連線 Firebase';
+    subscribeCategories();
+    subscribeTransactions();
+  }
+});
+signInAnonymously(auth).catch((err) => {
+  document.getElementById("sync-note").textContent = "連線失敗：" + err.message;
+});
+
+// ---------------- Firestore subscriptions ----------------
+function subscribeCategories() {
+  const q = collection(db, `ledgers/${LEDGER_CODE}/categories`);
+  onSnapshot(q, async (snap) => {
+    categories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (categories.length === 0 && !categoriesSeeded) {
+      categoriesSeeded = true;
+      for (const c of DEFAULT_CATEGORIES) {
+        await addDoc(collection(db, `ledgers/${LEDGER_CODE}/categories`), c);
+      }
+      return; // 下一次 snapshot 會帶著種子資料回來
+    }
+    populateCategorySelects();
+    renderCurrentView();
+  });
+}
+
+function subscribeTransactions() {
+  const q = query(collection(db, `ledgers/${LEDGER_CODE}/transactions`), orderBy("date", "desc"));
+  onSnapshot(q, (snap) => {
+    transactions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderCurrentView();
+  });
+}
+
+// ---------------- Helpers ----------------
+function todayMonthKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+function monthKeyOf(dateStr) { return dateStr ? dateStr.slice(0, 7) : ""; }
+function formatMoney(n) { return "$" + Math.round(n).toLocaleString(); }
+function monthLabel(key) {
+  const [y, m] = key.split("-");
+  return `${y}年${m}月`;
+}
+function shiftMonth(key, delta) {
+  const [y, m] = key.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+function txForMonth(key) { return transactions.filter(t => monthKeyOf(t.date) === key); }
+function sumByType(list, type) { return list.filter(t => t.type === type).reduce((s, t) => s + Number(t.amount || 0), 0); }
+function catById(id) { return categories.find(c => c.id === id); }
+function catByName(name) { return categories.find(c => c.name === name); }
+
+function populateCategorySelects() {
+  const txSel = document.getElementById("tx-category");
+  const fSel = document.getElementById("f-category");
+  const list = categories.filter(c => c.type === txType);
+  txSel.innerHTML = list.map(c => `<option value="${c.name}">${c.name}</option>`).join("");
+
+  const prevVal = fSel.value;
+  fSel.innerHTML = '<option value="all">全部分類</option>' +
+    categories.map(c => `<option value="${c.name}">${c.name}</option>`).join("");
+  fSel.value = prevVal || "all";
+}
+
+// ---------------- View switching ----------------
+document.getElementById("sidenav").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-view]");
+  if (btn) switchView(btn.dataset.view);
+});
+document.querySelectorAll("[data-view='details']").forEach(el => {
+  el.addEventListener("click", () => switchView("details"));
+});
+
+function switchView(view) {
+  currentView = view;
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  document.getElementById(`view-${view}`).classList.add("active");
+  document.querySelectorAll("#sidenav button").forEach(b => b.classList.toggle("active", b.dataset.view === view));
+  renderCurrentView();
+}
+
+function renderCurrentView() {
+  if (!uid) return;
+  renderDashboard();
+  if (currentView === "overview") renderOverview();
+  if (currentView === "summary") renderSummary();
+  if (currentView === "details") renderDetails();
+  if (currentView === "categories") renderCategories();
+  if (currentView === "report") renderReport();
+}
+
+// ---------------- Dashboard ----------------
+document.getElementById("dash-prev").addEventListener("click", () => { currentMonth = shiftMonth(currentMonth, -1); renderCurrentView(); });
+document.getElementById("dash-next").addEventListener("click", () => { currentMonth = shiftMonth(currentMonth, 1); renderCurrentView(); });
+
+function renderDashboard() {
+  const [y, m] = currentMonth.split("-");
+  document.getElementById("dash-month-num").textContent = m;
+  document.getElementById("dash-month-box").textContent = monthLabel(currentMonth);
+
+  const list = txForMonth(currentMonth);
+  const income = sumByType(list, "income");
+  const expense = sumByType(list, "expense");
+  const balance = income - expense;
+
+  document.getElementById("dash-balance").textContent = formatMoney(balance);
+  document.getElementById("dash-balance").classList.toggle("neg", balance < 0);
+  document.getElementById("dash-count").textContent = `${list.length} 筆`;
+  document.getElementById("dash-income").textContent = formatMoney(income);
+  document.getElementById("dash-expense").textContent = formatMoney(expense);
+
+  const recentBox = document.getElementById("dash-recent");
+  const recent = [...list].sort((a, b) => (b.date || "").localeCompare(a.date || "")).slice(0, 6);
+  recentBox.innerHTML = recent.length ? recent.map(txRowHtml).join("") :
+    '<div class="empty-state">這個月還沒有任何紀錄</div>';
+  bindRowActions(recentBox);
+}
+
+function txRowHtml(t) {
+  const cat = catByName(t.category);
+  const isIncome = t.type === "income";
+  const initial = (t.category || "?").slice(0, 1);
+  return `
+    <div class="tx-row" data-id="${t.id}">
+      <div class="tx-badge ${isIncome ? "income" : ""}" style="background:${cat ? cat.color : "#7A2233"}">${initial}</div>
+      <div class="tx-main">
+        <div class="cat">${t.category} <span style="color:var(--muted);font-weight:400;">${isIncome ? "收入" : "支出"}</span></div>
+        <div class="meta">${t.date}${t.note ? " · " + t.note : ""}</div>
+      </div>
+      <div class="tx-amount ${isIncome ? "pos" : "neg"}">${isIncome ? "+" : "-"}${formatMoney(t.amount)}</div>
+      <div class="tx-actions">
+        <button class="icon-btn edit-btn" title="編輯">✎</button>
+        <button class="icon-btn del-btn" title="刪除">🗑</button>
+      </div>
+    </div>`;
+}
+
+function bindRowActions(container) {
+  container.querySelectorAll(".edit-btn").forEach(b => b.addEventListener("click", (e) => {
+    const id = e.target.closest(".tx-row").dataset.id;
+    openTxModal(transactions.find(t => t.id === id));
+  }));
+  container.querySelectorAll(".del-btn").forEach(b => b.addEventListener("click", async (e) => {
+    const id = e.target.closest(".tx-row").dataset.id;
+    if (confirm("確定要刪除這筆明細嗎？")) await deleteDoc(doc(db, `ledgers/${LEDGER_CODE}/transactions/${id}`));
+  }));
+}
+
+// ---------------- Overview ----------------
+function renderOverview() {
+  const list = txForMonth(currentMonth);
+  const income = sumByType(list, "income");
+  const expense = sumByType(list, "expense");
+  document.getElementById("ov-income").textContent = formatMoney(income);
+  document.getElementById("ov-expense").textContent = formatMoney(expense);
+  document.getElementById("ov-balance").textContent = formatMoney(income - expense);
+
+  // 近六個月趨勢
+  const months = [];
+  for (let i = 5; i >= 0; i--) months.push(shiftMonth(currentMonth, -i));
+  const incomeData = months.map(mk => sumByType(txForMonth(mk), "income"));
+  const expenseData = months.map(mk => sumByType(txForMonth(mk), "expense"));
+
+  if (trendChart) trendChart.destroy();
+  trendChart = new Chart(document.getElementById("chart-trend"), {
+    type: "bar",
+    data: {
+      labels: months.map(monthLabel),
+      datasets: [
+        { label: "收入", data: incomeData, backgroundColor: "#3E6B4F" },
+        { label: "支出", data: expenseData, backgroundColor: "#7A2233" }
+      ]
+    },
+    options: { responsive: true, plugins: { legend: { position: "bottom" } } }
+  });
+
+  // 分類佔比
+  const expenseByCat = {};
+  list.filter(t => t.type === "expense").forEach(t => { expenseByCat[t.category] = (expenseByCat[t.category] || 0) + Number(t.amount || 0); });
+  const total = Object.values(expenseByCat).reduce((a, b) => a + b, 0) || 1;
+  const rows = Object.entries(expenseByCat).sort((a, b) => b[1] - a[1]);
+  const box = document.getElementById("ov-breakdown");
+  box.innerHTML = rows.length ? rows.map(([name, amt]) => {
+    const cat = catByName(name);
+    const pct = Math.round((amt / total) * 100);
+    return `<div class="breakdown-row"><span class="swatch" style="background:${cat ? cat.color : "#999"}"></span><span class="name">${name}</span><span class="pct">${pct}%</span></div>`;
+  }).join("") : '<div class="empty-state">本月尚無支出資料</div>';
+}
+
+// ---------------- Summary ----------------
+function renderSummary() {
+  const list = txForMonth(currentMonth);
+  const cats = [...new Set(list.map(t => t.category))];
+  const incomeData = cats.map(c => sumByType(list.filter(t => t.category === c), "income"));
+  const expenseData = cats.map(c => sumByType(list.filter(t => t.category === c), "expense"));
+
+  if (summaryChart) summaryChart.destroy();
+  summaryChart = new Chart(document.getElementById("chart-summary"), {
+    type: "bar",
+    data: {
+      labels: cats,
+      datasets: [
+        { label: "收入", data: incomeData, backgroundColor: "#3E6B4F" },
+        { label: "支出", data: expenseData, backgroundColor: "#7A2233" }
+      ]
+    },
+    options: { responsive: true, plugins: { legend: { position: "bottom" } } }
+  });
+}
+
+// ---------------- Details ----------------
+["f-month", "f-type", "f-category", "f-keyword"].forEach(id => {
+  document.getElementById(id).addEventListener("input", () => {
+    filters.month = document.getElementById("f-month").value;
+    filters.type = document.getElementById("f-type").value;
+    filters.category = document.getElementById("f-category").value;
+    filters.keyword = document.getElementById("f-keyword").value.trim().toLowerCase();
+    renderDetails();
+  });
+});
+
+function renderDetails() {
+  document.getElementById("f-month").value = filters.month || currentMonth;
+  filters.month = document.getElementById("f-month").value;
+
+  let list = transactions.filter(t => monthKeyOf(t.date) === filters.month);
+  if (filters.type !== "all") list = list.filter(t => t.type === filters.type);
+  if (filters.category !== "all") list = list.filter(t => t.category === filters.category);
+  if (filters.keyword) list = list.filter(t =>
+    (t.category || "").toLowerCase().includes(filters.keyword) ||
+    (t.note || "").toLowerCase().includes(filters.keyword));
+
+  const body = document.getElementById("details-body");
+  const empty = document.getElementById("details-empty");
+  if (list.length === 0) {
+    body.innerHTML = "";
+    empty.style.display = "block";
+    return;
+  }
+  empty.style.display = "none";
+  body.innerHTML = list.map(t => `
+    <tr data-id="${t.id}">
+      <td>${t.date}</td>
+      <td>${t.type === "income" ? "收入" : "支出"}</td>
+      <td>${t.category}</td>
+      <td>${t.note || "－"}</td>
+      <td style="text-align:right;" class="${t.type === "income" ? "" : ""}">
+        <span class="tx-amount ${t.type === "income" ? "pos" : "neg"}">${t.type === "income" ? "+" : "-"}${formatMoney(t.amount)}</span>
+      </td>
+      <td style="white-space:nowrap;">
+        <button class="icon-btn edit-btn" title="編輯">✎</button>
+        <button class="icon-btn del-btn" title="刪除">🗑</button>
+      </td>
+    </tr>`).join("");
+  bindRowActions(body);
+}
+
+// ---------------- Categories ----------------
+function renderCategories() {
+  const income = categories.filter(c => c.type === "income");
+  const expense = categories.filter(c => c.type === "expense");
+  document.getElementById("cat-income-count").textContent = income.length;
+  document.getElementById("cat-expense-count").textContent = expense.length;
+  document.getElementById("cat-income-list").innerHTML = catListHtml(income);
+  document.getElementById("cat-expense-list").innerHTML = catListHtml(expense);
+  bindCatActions();
+}
+
+function catListHtml(list) {
+  if (list.length === 0) return '<div class="empty-state">尚無分類</div>';
+  return list.map(c => {
+    const count = transactions.filter(t => t.category === c.name).length;
+    return `
+    <div class="cat-row" data-id="${c.id}">
+      <span class="swatch" style="background:${c.color}"></span>
+      <span class="name">${c.name}</span>
+      <span class="count">${count} 筆</span>
+      <button class="icon-btn edit-btn" title="編輯">✎</button>
+      <button class="icon-btn del-btn" title="刪除">🗑</button>
+    </div>`;
+  }).join("");
+}
+
+function bindCatActions() {
+  document.querySelectorAll(".cat-row .edit-btn").forEach(b => b.addEventListener("click", (e) => {
+    const id = e.target.closest(".cat-row").dataset.id;
+    openCatModal(catById(id));
+  }));
+  document.querySelectorAll(".cat-row .del-btn").forEach(b => b.addEventListener("click", async (e) => {
+    const id = e.target.closest(".cat-row").dataset.id;
+    if (confirm("刪除分類不會刪除已記錄的明細，確定刪除嗎？")) await deleteDoc(doc(db, `ledgers/${LEDGER_CODE}/categories/${id}`));
+  }));
+}
+
+// ---------------- Report ----------------
+function renderReport() {
+  document.getElementById("rep-title").textContent = `${monthLabel(currentMonth)} · 月度收支報表`;
+  document.getElementById("rep-meta").textContent = `產生時間：${new Date().toLocaleString("zh-TW")} · 明細共 ${txForMonth(currentMonth).length} 筆`;
+
+  const list = txForMonth(currentMonth);
+  const income = sumByType(list, "income");
+  const expense = sumByType(list, "expense");
+  document.getElementById("rep-income").textContent = formatMoney(income);
+  document.getElementById("rep-expense").textContent = formatMoney(expense);
+  document.getElementById("rep-balance").textContent = formatMoney(income - expense);
+
+  const expenseByCat = {};
+  list.filter(t => t.type === "expense").forEach(t => { expenseByCat[t.category] = (expenseByCat[t.category] || 0) + Number(t.amount || 0); });
+  const total = Object.values(expenseByCat).reduce((a, b) => a + b, 0) || 1;
+  const rows = Object.entries(expenseByCat).sort((a, b) => b[1] - a[1]);
+  document.getElementById("rep-body").innerHTML = rows.length ? rows.map(([name, amt]) => `
+    <tr><td>${name}</td><td>${formatMoney(amt)}</td><td style="text-align:right;">${Math.round((amt / total) * 100)}%</td></tr>
+  `).join("") : `<tr><td colspan="3" style="text-align:center;color:var(--muted);">本月尚無支出</td></tr>`;
+}
+
+// ---------------- Transaction modal ----------------
+const txModal = document.getElementById("modal-tx");
+document.getElementById("btn-add-tx").addEventListener("click", () => openTxModal());
+document.getElementById("tx-cancel").addEventListener("click", () => txModal.classList.remove("open"));
+document.getElementById("tx-type-toggle").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-type]");
+  if (!b) return;
+  txType = b.dataset.type;
+  document.querySelectorAll("#tx-type-toggle button").forEach(x => x.classList.toggle("active", x === b));
+  populateCategorySelects();
+});
+
+function openTxModal(tx) {
+  editingTxId = tx ? tx.id : null;
+  document.getElementById("tx-modal-title").textContent = tx ? "編輯明細" : "新增明細";
+  txType = tx ? tx.type : "expense";
+  document.querySelectorAll("#tx-type-toggle button").forEach(x => x.classList.toggle("active", x.dataset.type === txType));
+  populateCategorySelects();
+  document.getElementById("tx-date").value = tx ? tx.date : new Date().toISOString().slice(0, 10);
+  document.getElementById("tx-category").value = tx ? tx.category : (categories.find(c => c.type === txType) || {}).name || "";
+  document.getElementById("tx-note").value = tx ? (tx.note || "") : "";
+  document.getElementById("tx-amount").value = tx ? tx.amount : "";
+  txModal.classList.add("open");
+}
+
+document.getElementById("tx-save").addEventListener("click", async () => {
+  const data = {
+    type: txType,
+    date: document.getElementById("tx-date").value,
+    category: document.getElementById("tx-category").value,
+    note: document.getElementById("tx-note").value.trim(),
+    amount: Number(document.getElementById("tx-amount").value || 0)
+  };
+  if (!data.date || !data.category || !data.amount) { alert("請填寫日期、分類與金額"); return; }
+  if (editingTxId) {
+    await updateDoc(doc(db, `ledgers/${LEDGER_CODE}/transactions/${editingTxId}`), data);
+  } else {
+    await addDoc(collection(db, `ledgers/${LEDGER_CODE}/transactions`), { ...data, createdAt: serverTimestamp() });
+  }
+  txModal.classList.remove("open");
+});
+
+// ---------------- Category modal ----------------
+const catModal = document.getElementById("modal-cat");
+document.getElementById("btn-add-cat").addEventListener("click", () => openCatModal());
+document.getElementById("cat-cancel").addEventListener("click", () => catModal.classList.remove("open"));
+document.getElementById("cat-type-toggle").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-type]");
+  if (!b) return;
+  catType = b.dataset.type;
+  document.querySelectorAll("#cat-type-toggle button").forEach(x => x.classList.toggle("active", x === b));
+});
+
+function openCatModal(cat) {
+  editingCatId = cat ? cat.id : null;
+  document.getElementById("cat-modal-title").textContent = cat ? "編輯分類" : "新增分類";
+  catType = cat ? cat.type : "expense";
+  document.querySelectorAll("#cat-type-toggle button").forEach(x => x.classList.toggle("active", x.dataset.type === catType));
+  document.getElementById("cat-name").value = cat ? cat.name : "";
+  document.getElementById("cat-color").value = cat ? cat.color : "#7A2233";
+  catModal.classList.add("open");
+}
+
+document.getElementById("cat-save").addEventListener("click", async () => {
+  const data = {
+    type: catType,
+    name: document.getElementById("cat-name").value.trim(),
+    color: document.getElementById("cat-color").value
+  };
+  if (!data.name) { alert("請輸入分類名稱"); return; }
+  if (editingCatId) {
+    await updateDoc(doc(db, `ledgers/${LEDGER_CODE}/categories/${editingCatId}`), data);
+  } else {
+    await addDoc(collection(db, `ledgers/${LEDGER_CODE}/categories`), data);
+  }
+  catModal.classList.remove("open");
+});
+
+// 點擊遮罩關閉 modal
+[txModal, catModal].forEach(m => m.addEventListener("click", (e) => { if (e.target === m) m.classList.remove("open"); }));
+</script>
+</body>
+</html>
